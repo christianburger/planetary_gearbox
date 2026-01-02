@@ -1,8 +1,11 @@
 // ============================================================================
-// 4.67:1 PLANETARY GEARBOX - MODULAR DESIGN
+// 4.67:1 PLANETARY GEARBOX - REFACTORED (BOX RING + BEARING TOP)
 // ============================================================================
 // BOSL2 library required
-// Based on the spur gearbox design
+// Refactored: 
+// 1. Ring gear is main body. 
+// 2. Top/Bottom are lids.
+// 3. Top lid has 695ZZ bearing pocket for output/support.
 // ============================================================================
 
 include <BOSL2/std.scad>
@@ -24,7 +27,8 @@ tolerance_output_bore = 0.4;
 // ============================================================================
 teeth_sun = 9;           // Sun gear (input)
 teeth_planet = 12;       // Planet gears (3x)
-teeth_ring = 33;         // Ring gear (fixed) = sun + 2*planet
+teeth_ring = 33;         // Ring gear (fixed)
+
 gear_module = 1.156;
 gear_thickness = 10;
 gear_pressure_angle = 20;
@@ -40,7 +44,7 @@ outer_radius_ring = (gear_module * (teeth_ring + 2)) / 2;
 // Planet carrier circle radius
 carrier_radius = pitch_radius_sun + pitch_radius_planet;
 
-// Gear ratio calculation (ring fixed, sun input, carrier output)
+// Gear ratio calculation
 gear_ratio = (teeth_ring + teeth_sun) / teeth_sun;
 
 // Gear chamfers
@@ -52,83 +56,67 @@ chamfer_base_radius_planet = outer_radius_planet - chamfer_height * tan(chamfer_
 // ============================================================================
 // BEARING SPECIFICATIONS
 // ============================================================================
-// 683ZZ: 3mm ID, 7mm OD, 3mm thickness (for planet shafts)
+// 683ZZ (Planets)
 bearing_683_id = 3;
 bearing_683_od = 7;
 bearing_683_thickness = 3;
 
-// 695ZZ: 5mm ID, 13mm OD, 4mm thickness (for sun gear support)
+// 695ZZ (Top Housing Support)
 bearing_695_id = 5;
 bearing_695_od = 13;
 bearing_695_thickness = 4;
 
 // ============================================================================
-// SUN GEAR PARAMETERS
+// COMPONENT PARAMETERS
 // ============================================================================
-shaft_diameter_sun = 5.0;      // D-shaped shaft
-shaft_flat_height = 4.0;       // D-shaft flat dimension
+
+// SUN GEAR
+shaft_diameter_sun = 5.0;      
+shaft_flat_height = 4.0;
 hub_diameter_sun = 12;
 hub_height_sun = 10;
 setscrew_sun_diameter = 5.0;
 setscrew_sun_clearance = 0.6;
+clearance_sun_insertion = 3.0;
+sun_insertion_bore_diameter = outer_radius_sun * 2 + clearance_sun_insertion;
 
-// ============================================================================
-// PLANET GEAR PARAMETERS
-// ============================================================================
+// PLANET GEARS
 planet_shaft_diameter = 3.0;
-planet_shaft_length = gear_thickness + 2;
 planet_bearing_pocket_depth = bearing_683_thickness + 0.5;
-
-// Planet shaft positions (120° apart)
 planet_angle_1 = 0;
 planet_angle_2 = 120;
 planet_angle_3 = 240;
 
-// ============================================================================
-// CARRIER PARAMETERS
-// ============================================================================
+// CARRIER
 carrier_plate_thickness = 6;
 carrier_plate_diameter = pitch_radius_ring * 2 - 4;
-clearance_gear_to_plate = 1.5;      // Clearance above and below gears
-carrier_to_planets_clearance = 5;   // Clearance around planet gears
+clearance_gear_to_plate = 1.5;
+carrier_to_planets_clearance = 5;   
 carrier_spacing = gear_thickness + clearance_gear_to_plate * 2;
 carrier_total_height = carrier_plate_thickness * 2 + carrier_spacing;
 
-// Output shaft parameters
+// OUTPUT SHAFT
 shaft_diameter_output = 9.0;
 hub_diameter_output = 18;
 hub_height_output = 22 - carrier_plate_thickness;
-
-// Output setscrew parameters
 setscrew_output_diameter = 3.0;
 setscrew_output_clearance = 0.6;
 setscrew_output_height = hub_height_output - 3;
 
-// Sun gear insertion clearance
-clearance_sun_insertion = 3.0;
-sun_insertion_bore_diameter = outer_radius_sun * 2 + clearance_sun_insertion;
-
 // ============================================================================
-// RING GEAR PARAMETERS
-// ============================================================================
-ring_gear_thickness = carrier_total_height;  // Match carrier height
-ring_gear_outer_diameter = pitch_radius_ring * 2 + 12;
-ring_gear_wall_thickness = 4;
-
-// ============================================================================
-// HOUSING PARAMETERS
+// REFACTORED HOUSING & RING PARAMETERS
 // ============================================================================
 wall_thickness = 3;
-housing_inner_clearance = 1;
-housing_size = ring_gear_outer_diameter + wall_thickness;
-housing_height_bottom = carrier_total_height / 2 + wall_thickness + 2;
-housing_height_top = carrier_total_height / 2 + wall_thickness + 2;
-box_chamfer_size = 4;  // 4mm corner chamfers
 
-// ============================================================================
-// NEMA17 MOTOR PARAMETERS
-// ============================================================================
-nema17_body_size = 42.3;
+// The Ring Gear is now the main body height
+ring_gear_thickness = carrier_total_height + 1.0; 
+ring_gear_outer_diameter = pitch_radius_ring * 2 + 12;
+
+// Housing Size (Square box)
+housing_size = ring_gear_outer_diameter + wall_thickness;
+box_chamfer_size = 4; 
+
+// NEMA17 MOTOR
 nema17_hole_spacing = 31;
 nema17_hole_diameter = 3.2;
 nema17_boss_diameter = 23;
@@ -138,540 +126,270 @@ nema17_boss_depth = 2.5;
 // VISUALIZATION OFFSETS
 // ============================================================================
 z_offset_sun = 80;
-z_offset_carrier = 83;
 z_offset_planets = 88;
-z_offset_ring = 120;
-z_offset_housing_bottom = 0;
-z_offset_housing_top = 180;
+z_offset_carrier = 83;
+z_offset_ring = 120;           // Ring gear (Body)
+z_offset_housing_bottom = 0;   // Bottom Plate
+z_offset_housing_top = 180;    // Top Plate
 
 // ============================================================================
-// HELPER FUNCTIONS
+// HELPER MODULES
 // ============================================================================
 function polar_xy(radius, angle_deg) = [
     radius * cos(angle_deg),
     radius * sin(angle_deg)
 ];
 
-// ============================================================================
-// MODULES
-// ============================================================================
-
-// Corner chamfer module (from original design)
-module corner_chamfer(chamfer_width, chamfer_size) {
-    cube([chamfer_width, chamfer_size, housing_height_bottom * 2]);
+// Reusable bearing pocket cutter (subtractive)
+module bearing_pocket_cut(od, depth, clearance) {
+    cylinder(d = od + clearance, h = depth + 0.05);
 }
 
-// Gear chamfer module
+// Reusable shape for Top, Bottom, and Ring Gear external profile
+module housing_body_profile(size, height, chamfer_size) {
+    difference() {
+        // Main square
+        translate([-size/2, -size/2, 0])
+            cube([size, size, height]);
+
+        // Corner Chamfers
+        cutting_offset = size/2;
+        chamfer_hyp = chamfer_size / sqrt(2);
+        
+        // Loop through 4 corners to cut chamfers
+        for(r = [0, 90, 180, 270]) {
+            rotate([0, 0, r])
+                translate([cutting_offset, cutting_offset, -0.1])
+                    rotate([0, 0, 45])
+                        translate([-chamfer_size/2, -chamfer_size, 0]) 
+                            cube([chamfer_size*2, chamfer_size*2, height + 0.2]);
+        }
+    }
+}
+
+// Gear Chamfer Logic
 module gear_chamfer(gear_thickness, outer_radius, chamfer_base_radius, chamfer_height) {
-    // Top chamfer
+    // Top
     difference() {
         translate([0, 0, gear_thickness/2 - chamfer_height])
             cylinder(d = outer_radius * 2 + 4, h = chamfer_height + 5);
         translate([0, 0, gear_thickness/2 - chamfer_height])
-            cylinder(r1 = outer_radius + 2, 
-                   r2 = chamfer_base_radius, 
-                   h = chamfer_height);
+            cylinder(r1 = outer_radius + 2, r2 = chamfer_base_radius, h = chamfer_height);
     }
-    
-    // Bottom chamfer
+    // Bottom
     mirror([0, 0, 1])
         difference() {
             translate([0, 0, gear_thickness/2 - chamfer_height])
                 cylinder(d = outer_radius * 2 + 4, h = chamfer_height + 5);
             translate([0, 0, gear_thickness/2 - chamfer_height])
-                cylinder(r1 = outer_radius + 2, 
-                       r2 = chamfer_base_radius, 
-                       h = chamfer_height);
+                cylinder(r1 = outer_radius + 2, r2 = chamfer_base_radius, h = chamfer_height);
         }
 }
 
-// Sun gear module
-module sun_gear(
-    teeth,
-    mod,
-    thickness,
-    pressure_angle,
-    shaft_diam,
-    shaft_flat_height,
-    hub_diam,
-    hub_height,
-    tolerance_shaft,
-    setscrew_diam,
-    setscrew_clearance,
-    outer_radius,
-    chamfer_base_radius,
-    chamfer_height
-) {
-    // Hub with D-bore
+// ============================================================================
+// PART MODULES
+// ============================================================================
+
+module sun_gear(teeth, mod, thickness, pressure_angle, shaft_diam, shaft_flat_height, hub_diam, hub_height, tolerance_shaft, setscrew_diam, setscrew_clearance, outer_radius, chamfer_base_radius, chamfer_height) {
     translate([0, 0, thickness/2 + hub_height])
         rotate([180, 0, 0])
             difference() {
-                translate([0, 0, thickness/2])
-                    cylinder(d = hub_diam, h = hub_height);
-                
-                // D-shaped bore
+                translate([0, 0, thickness/2]) cylinder(d = hub_diam, h = hub_height);
                 translate([0, 0, thickness/2 - 0.1])
                     linear_extrude(height = hub_height + 0.2) {
                         difference() {
                             circle(r = (shaft_diam + tolerance_shaft) / 2);
-                            translate([-(shaft_diam + tolerance_shaft)/2, 
-                                     -(shaft_diam + tolerance_shaft)/2])
-                                square([shaft_diam + tolerance_shaft, 
-                                       (shaft_diam + tolerance_shaft)/2 - shaft_flat_height/2]);
+                            translate([-(shaft_diam + tolerance_shaft)/2, -(shaft_diam + tolerance_shaft)/2])
+                                square([shaft_diam + tolerance_shaft, (shaft_diam + tolerance_shaft)/2 - shaft_flat_height/2]);
                         }
                     }
-                
-                // Setscrew hole
                 translate([0, -hub_diam, thickness/2 + hub_height/2])
                     rotate([90, 0, 0])
-                        cylinder(d = setscrew_diam - setscrew_clearance, 
-                               h = hub_diam * 2, 
-                               center = true);
+                        cylinder(d = setscrew_diam - setscrew_clearance, h = hub_diam * 2, center = true);
             }
-    
-    // Gear body with chamfers
     translate([0, 0, thickness/2 + hub_height])
         difference() {
-            spur_gear(
-                mod = mod,
-                teeth = teeth,
-                thickness = thickness,
-                shaft_diam = shaft_diam + tolerance_shaft,
-                pressure_angle = pressure_angle
-            );
-            
-            // Apply chamfers
+            spur_gear(mod = mod, teeth = teeth, thickness = thickness, shaft_diam = shaft_diam + tolerance_shaft, pressure_angle = pressure_angle);
             gear_chamfer(thickness, outer_radius, chamfer_base_radius, chamfer_height);
         }
 }
 
-// Planet gear module - NOW WITH BEARING POCKETS
-module planet_gear(
-    teeth,
-    mod,
-    thickness,
-    pressure_angle,
-    shaft_diam,
-    tolerance_shaft,
-    outer_radius,
-    chamfer_base_radius,
-    chamfer_height,
-    bearing_od,
-    bearing_id,
-    bearing_pocket_depth,
-    clearance_bearing
-) {
+module planet_gear(teeth, mod, thickness, pressure_angle, shaft_diam, tolerance_shaft, outer_radius, chamfer_base_radius, chamfer_height, bearing_od, bearing_id, bearing_pocket_depth, clearance_bearing) {
     difference() {
-        spur_gear(
-            mod = mod,
-            teeth = teeth,
-            thickness = thickness,
-            shaft_diam = shaft_diam + tolerance_shaft,
-            pressure_angle = pressure_angle
-        );
+        spur_gear(mod = mod, teeth = teeth, thickness = thickness, shaft_diam = shaft_diam + tolerance_shaft, pressure_angle = pressure_angle);
         
-        // Through bore for planet shaft (bearing ID)
-        translate([0, 0, -thickness/2 - 0.1])
-            cylinder(d = bearing_id + tolerance_shaft, 
-                   h = thickness + 0.2);
-        
-        // Bearing pocket on BOTTOM face
-        translate([0, 0, -thickness/2 - 0.1])
-            cylinder(d = bearing_od + clearance_bearing, 
-                   h = bearing_pocket_depth + 0.1);
-        
-        // Bearing pocket on TOP face
+        // Through bore
+        translate([0, 0, -thickness/2 - 0.1]) 
+            cylinder(d = bearing_id + tolerance_shaft, h = thickness + 0.2);
+            
+        // Bottom Bearing Pocket (Using Module)
+        translate([0, 0, -thickness/2 - 0.01])
+            bearing_pocket_cut(bearing_od, bearing_pocket_depth, clearance_bearing);
+            
+        // Top Bearing Pocket (Using Module)
         translate([0, 0, thickness/2 - bearing_pocket_depth])
-            cylinder(d = bearing_od + clearance_bearing, 
-                   h = bearing_pocket_depth + 0.1);
-        
-        // Apply chamfers
+            bearing_pocket_cut(bearing_od, bearing_pocket_depth, clearance_bearing);
+            
         gear_chamfer(thickness, outer_radius, chamfer_base_radius, chamfer_height);
     }
 }
 
-// Ring gear module
-module ring_gear_internal(
-    teeth,
-    mod,
-    thickness,
-    pressure_angle,
-    outer_diam
-) {
+module carrier(plate_diam, plate_thickness, spacing, total_height, carrier_radius, planet_angles, bearing_id, clearance_boss, planet_outer_radius, planet_clearance, shaft_diam, tolerance_bore, sun_bore_diam, clearance_plate, hub_diam, hub_height, setscrew_diam, setscrew_clearance, setscrew_height) {
     difference() {
-        // Outer cylinder (tube)
-        cylinder(d = outer_diam, h = thickness);
+        union() {
+            cylinder(d = plate_diam, h = plate_thickness);
+            translate([0, 0, plate_thickness]) cylinder(d = plate_diam, h = spacing);
+            translate([0, 0, spacing + plate_thickness]) cylinder(d = plate_diam, h = plate_thickness);
+            translate([0, 0, total_height])
+                difference() {
+                    cylinder(d = hub_diam, h = hub_height);
+                    translate([0, 0, -0.1]) cylinder(d = shaft_diam + tolerance_bore, h = hub_height + 0.2);
+                    translate([0, 0, setscrew_height]) rotate([90, 0, 0]) cylinder(d = setscrew_diam - setscrew_clearance, h = hub_diam, center = true);
+                }
+        }
+        translate([0, 0, -0.1]) cylinder(d = shaft_diam + tolerance_bore, h = total_height + 0.2);
+        translate([0, 0, -0.1]) cylinder(d = sun_bore_diam, h = plate_thickness + clearance_plate + 0.1);
+        for (angle = planet_angles) {
+            translate(concat(polar_xy(carrier_radius, angle), [plate_thickness - 0.1]))
+                cylinder(d = planet_outer_radius * 2 + planet_clearance, h = spacing + 0.2);
+        }
+        for (angle = planet_angles) {
+            translate(concat(polar_xy(carrier_radius, angle), [-0.1]))
+                cylinder(d = bearing_id + clearance_boss, h = total_height + 0.2);
+        }
+    }
+}
+
+// ============================================================================
+// REFACTORED MODULES
+// ============================================================================
+
+module ring_gear_box_body(teeth, mod, thickness, pressure_angle, housing_size, chamfer_size) {
+    difference() {
+        // External Housing Shape
+        housing_body_profile(housing_size, thickness, chamfer_size);
         
-        // Internal gear teeth (created by subtracting a spur gear)
+        // Internal Gear Teeth
         translate([0, 0, thickness / 2])
             spur_gear(
                 mod = mod,
                 teeth = teeth,
-                thickness = thickness,
+                thickness = thickness + 0.1, 
                 shaft_diam = 0,
                 pressure_angle = pressure_angle
             );
+            
+        // Through-holes for NEMA17 screws
+        for (angle = [45, 135, 225, 315]) {
+            translate(concat(polar_xy(nema17_hole_spacing/sqrt(2), angle), [-0.1]))
+                cylinder(d = nema17_hole_diameter + clearance_screw_hole, h = thickness + 0.2);
+        }
     }
 }
 
-// Carrier hub module
-module carrier_hub(
-    hub_diam,
-    hub_height,
-    shaft_diam,
-    tolerance_bore,
-    setscrew_diam,
-    setscrew_clearance,
-    setscrew_height
-) {
+module bottom_housing_plate(size, thickness, chamfer_size) {
     difference() {
-        // Hub body
-        cylinder(d = hub_diam, h = hub_height);
+        housing_body_profile(size, thickness, chamfer_size);
         
-        // Central bore for output shaft
+        // NEMA17 Boss Recess
         translate([0, 0, -0.1])
-            cylinder(d = shaft_diam + tolerance_bore, 
-                   h = hub_height + 0.2);
-        
-        // Setscrew hole
-        translate([0, 0, setscrew_height])
-            rotate([90, 0, 0])
-                cylinder(d = setscrew_diam - setscrew_clearance, 
-                       h = hub_diam, center = true);
+            cylinder(d = nema17_boss_diameter, h = nema17_boss_depth + 0.1);
+            
+        // Sun Shaft / Motor Shaft Hole
+        translate([0, 0, -0.1])
+            cylinder(d = shaft_diameter_sun + tolerance_shaft + 2, h = thickness + 0.2);
+            
+        // Mounting Holes
+        for (angle = [45, 135, 225, 315]) {
+            translate(concat(polar_xy(nema17_hole_spacing/sqrt(2), angle), [-0.1]))
+                cylinder(d = nema17_hole_diameter + clearance_screw_hole, h = thickness + 0.2);
+        }
     }
 }
 
-// Carrier module - BEARING POCKETS REMOVED
-module carrier(
-    plate_diam,
-    plate_thickness,
-    spacing,
-    total_height,
-    carrier_radius,
-    planet_angles,
-    bearing_id,
-    clearance_boss,
-    planet_outer_radius,
-    planet_clearance,
-    shaft_diam,
-    tolerance_bore,
-    sun_bore_diam,
-    clearance_plate,
-    hub_diam,
-    hub_height,
-    setscrew_diam,
-    setscrew_clearance,
-    setscrew_height
-) {
+module top_housing_plate(size, thickness, chamfer_size) {
     difference() {
         union() {
-            // Bottom cylinder
-            cylinder(d = plate_diam, h = plate_thickness);
+            // Base plate
+            housing_body_profile(size, thickness, chamfer_size);
             
-            // Middle cylinder
-            translate([0, 0, plate_thickness])
-                cylinder(d = plate_diam, h = spacing);
-            
-            // Top cylinder
-            translate([0, 0, spacing + plate_thickness])
-                cylinder(d = plate_diam, h = plate_thickness);
-            
-            // Output hub (top only)
-            translate([0, 0, total_height])
-                carrier_hub(
-                    hub_diam = hub_diam,
-                    hub_height = hub_height,
-                    shaft_diam = shaft_diam,
-                    tolerance_bore = tolerance_bore,
-                    setscrew_diam = setscrew_diam,
-                    setscrew_clearance = setscrew_clearance,
-                    setscrew_height = setscrew_height
-                );
+            // BEARING BOSS (Added to Top/Outer Face)
+            // Adds material to support the bearing thickness
+            translate([0, 0, thickness - 0.01])
+                cylinder(d = bearing_695_od + 2*wall_thickness, h = bearing_695_thickness);
         }
         
-        // Central bore for output shaft
+        // Center Clearance Hole (for shaft passing through bearing)
+        // Uses bearing ID + 0.5mm clearance
         translate([0, 0, -0.1])
-            cylinder(d = shaft_diam + tolerance_bore, 
-                   h = total_height + 0.2);
-        
-        // Sun gear insertion bore through bottom
-        translate([0, 0, -0.1])
-            cylinder(d = sun_bore_diam, 
-                   h = plate_thickness + clearance_plate + 0.1);
-        
-        // Planet gear pockets in middle section
-        for (angle = planet_angles) {
-            translate(concat(polar_xy(carrier_radius, angle), 
-                           [plate_thickness - 0.1]))
-                cylinder(d = planet_outer_radius * 2 + planet_clearance, 
-                       h = spacing + 0.2);
-        }
-        
-        // Through holes for planet shafts (bearing ID size)
-        for (angle = planet_angles) {
-            translate(concat(polar_xy(carrier_radius, angle), [-0.1]))
-                cylinder(d = bearing_id + clearance_boss, 
-                       h = total_height + 0.2);
+            cylinder(d = bearing_695_id + 0.5, h = thickness + bearing_695_thickness + 0.2);
+            
+        // BEARING POCKET (Top/Outer Face)
+        // Uses the reusable module
+        translate([0, 0, thickness + bearing_695_thickness - bearing_695_thickness])
+             bearing_pocket_cut(bearing_695_od, bearing_695_thickness, clearance_bearing_pocket);
+            
+        // Mounting Holes
+        for (angle = [45, 135, 225, 315]) {
+            translate(concat(polar_xy(nema17_hole_spacing/sqrt(2), angle), [-0.1]))
+                cylinder(d = nema17_hole_diameter + clearance_screw_hole, h = thickness + bearing_695_thickness + 0.2);
         }
     }
 }
 
 // ============================================================================
-// COMPONENT INSTANTIATION
+// INSTANTIATION
 // ============================================================================
 
-// SUN GEAR (Input - Blue)
+// SUN GEAR (Blue)
 color("lightblue")
 translate([0, 0, z_offset_sun]) {
-    sun_gear(
-        teeth = teeth_sun,
-        mod = gear_module,
-        thickness = gear_thickness,
-        pressure_angle = gear_pressure_angle,
-        shaft_diam = shaft_diameter_sun,
-        shaft_flat_height = shaft_flat_height,
-        hub_diam = hub_diameter_sun,
-        hub_height = hub_height_sun,
-        tolerance_shaft = tolerance_shaft,
-        setscrew_diam = setscrew_sun_diameter,
-        setscrew_clearance = setscrew_sun_clearance,
-        outer_radius = outer_radius_sun,
-        chamfer_base_radius = chamfer_base_radius_sun,
-        chamfer_height = chamfer_height
-    );
+    sun_gear(teeth_sun, gear_module, gear_thickness, gear_pressure_angle, shaft_diameter_sun, shaft_flat_height, hub_diameter_sun, hub_height_sun, tolerance_shaft, setscrew_sun_diameter, setscrew_sun_clearance, outer_radius_sun, chamfer_base_radius_sun, chamfer_height);
 }
 
-// PLANET GEARS (3x - Yellow) - NOW WITH BEARING POCKETS
+// PLANET GEARS (Yellow)
 for (angle = [planet_angle_1, planet_angle_2, planet_angle_3]) {
     color("yellow")
-    translate(concat(polar_xy(carrier_radius, angle), 
-                    [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate])) {
-        planet_gear(
-            teeth = teeth_planet,
-            mod = gear_module,
-            thickness = gear_thickness,
-            pressure_angle = gear_pressure_angle,
-            shaft_diam = planet_shaft_diameter,
-            tolerance_shaft = tolerance_shaft,
-            outer_radius = outer_radius_planet,
-            chamfer_base_radius = chamfer_base_radius_planet,
-            chamfer_height = chamfer_height,
-            bearing_od = bearing_683_od,
-            bearing_id = bearing_683_id,
-            bearing_pocket_depth = planet_bearing_pocket_depth,
-            clearance_bearing = clearance_bearing_pocket
-        );
+    translate(concat(polar_xy(carrier_radius, angle), [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate])) {
+        planet_gear(teeth_planet, gear_module, gear_thickness, gear_pressure_angle, planet_shaft_diameter, tolerance_shaft, outer_radius_planet, chamfer_base_radius_planet, chamfer_height, bearing_683_od, bearing_683_id, planet_bearing_pocket_depth, clearance_bearing_pocket);
     }
-}
-
-// PLANET SHAFTS (3x - Dark Gray) - FOR VISUALIZATION ONLY
-for (angle = [planet_angle_1, planet_angle_2, planet_angle_3]) {
+    // Planet Shafts Visual
     color("dimgray")
-    translate(concat(polar_xy(carrier_radius, angle), 
-                    [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate])) {
-        cylinder(d = planet_shaft_diameter, 
-               h = gear_thickness);
-    }
+    translate(concat(polar_xy(carrier_radius, angle), [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate]))
+        cylinder(d = planet_shaft_diameter, h = gear_thickness);
 }
 
-// CARRIER (Green) - NO BEARING POCKETS
+// CARRIER (Green)
 color("lightgreen")
 translate([0, 0, z_offset_carrier]) {
-    carrier(
-        plate_diam = carrier_plate_diameter,
-        plate_thickness = carrier_plate_thickness,
-        spacing = carrier_spacing,
-        total_height = carrier_total_height,
-        carrier_radius = carrier_radius,
-        planet_angles = [planet_angle_1, planet_angle_2, planet_angle_3],
-        bearing_id = bearing_683_id,
-        clearance_boss = clearance_boss_center,
-        planet_outer_radius = outer_radius_planet,
-        planet_clearance = carrier_to_planets_clearance,
-        shaft_diam = shaft_diameter_output,
-        tolerance_bore = tolerance_output_bore,
-        sun_bore_diam = sun_insertion_bore_diameter,
-        clearance_plate = clearance_gear_to_plate,
-        hub_diam = hub_diameter_output,
-        hub_height = hub_height_output,
-        setscrew_diam = setscrew_output_diameter,
-        setscrew_clearance = setscrew_output_clearance,
-        setscrew_height = setscrew_output_height
-    );
+    carrier(carrier_plate_diameter, carrier_plate_thickness, carrier_spacing, carrier_total_height, carrier_radius, [planet_angle_1, planet_angle_2, planet_angle_3], bearing_683_id, clearance_boss_center, outer_radius_planet, carrier_to_planets_clearance, shaft_diameter_output, tolerance_output_bore, sun_insertion_bore_diameter, clearance_gear_to_plate, hub_diameter_output, hub_height_output, setscrew_output_diameter, setscrew_output_clearance, setscrew_output_height);
 }
 
-// RING GEAR (Red - internal teeth, open top and bottom)
+// RING GEAR BODY (Red)
 color("red", 0.7)
 translate([0, 0, z_offset_ring]) {
-    ring_gear_internal(
+    ring_gear_box_body(
         teeth = teeth_ring,
         mod = gear_module,
         thickness = ring_gear_thickness,
         pressure_angle = gear_pressure_angle,
-        outer_diam = ring_gear_outer_diameter
+        housing_size = housing_size,
+        chamfer_size = box_chamfer_size
     );
 }
 
-// BOTTOM HOUSING (Gray)
+// BOTTOM HOUSING PLATE (Gray)
 color("gray", 0.5)
 translate([0, 0, z_offset_housing_bottom]) {
-    difference() {
-        union() {
-            // Main box body
-            translate([-housing_size/2, -housing_size/2, 0])
-                cube([housing_size, housing_size, housing_height_bottom]);
-        }
-        
-        // Cylindrical bore for ring gear
-        translate([0, 0, wall_thickness])
-            cylinder(d = ring_gear_outer_diameter, h = housing_height_bottom);
-        
-        // NEMA17 motor boss clearance
-        translate([0, 0, -0.1])
-            cylinder(d = nema17_boss_diameter, h = nema17_boss_depth + 0.1);
-        
-        // Sun shaft clearance
-        translate([0, 0, -0.1])
-            cylinder(d = shaft_diameter_sun + tolerance_shaft + 2, 
-                   h = housing_height_bottom + 0.2);
-        
-        // NEMA17 mounting holes
-        for (angle = [45, 135, 225, 315]) {
-            translate(concat(polar_xy(nema17_hole_spacing/sqrt(2), angle), [-0.1]))
-                cylinder(d = nema17_hole_diameter + clearance_screw_hole, 
-                       h = housing_height_bottom + 0.2);
-        }
-        
-        // Corner chamfers (cutting)
-        cutting_width = box_chamfer_size / 2;
-        
-        translate([-housing_size/2 + cutting_width/sqrt(2), 
-                  -housing_size/2 - cutting_width/sqrt(2), 0]) {
-            rotate([0, 0, 45])
-                corner_chamfer(cutting_width, box_chamfer_size);
-        }
-        
-        translate([housing_size/2 + cutting_width/sqrt(2), 
-                  -housing_size/2 + cutting_width/sqrt(2), 0]) {
-            rotate([0, 0, 135])
-                corner_chamfer(cutting_width, box_chamfer_size);
-        }
-        
-        translate([-housing_size/2 - cutting_width/sqrt(2), 
-                  housing_size/2 - cutting_width/sqrt(2), 0]) {
-            rotate([0, 0, 315])
-                corner_chamfer(cutting_width, box_chamfer_size);
-        }
-        
-        translate([housing_size/2 - cutting_width/sqrt(2), 
-                  housing_size/2 + cutting_width/sqrt(2), 0]) {
-            rotate([0, 0, 225])
-                corner_chamfer(cutting_width, box_chamfer_size);
-        }
-    }
-    
-    // External corner chamfers (additive)
-    chamfer_width = wall_thickness;
-    
-    translate([-housing_size/2 + box_chamfer_size/sqrt(2), -housing_size/2, 0]) {
-        rotate([0, 0, 45])
-            corner_chamfer(chamfer_width, box_chamfer_size);
-    }
-    
-    translate([housing_size/2, -housing_size/2 + box_chamfer_size/sqrt(2), 0]) {
-        rotate([0, 0, 135])
-            corner_chamfer(chamfer_width, box_chamfer_size);
-    }
-    
-    translate([-housing_size/2, housing_size/2 - box_chamfer_size/sqrt(2), 0]) {
-        rotate([0, 0, 315])
-            corner_chamfer(chamfer_width, box_chamfer_size);
-    }
-    
-    translate([housing_size/2 - box_chamfer_size/sqrt(2), housing_size/2, 0]) {
-        rotate([0, 0, 225])
-            corner_chamfer(chamfer_width, box_chamfer_size);
-    }
+    bottom_housing_plate(housing_size, wall_thickness, box_chamfer_size);
 }
 
-// TOP HOUSING (Gray)
+// TOP HOUSING PLATE (Gray)
 color("gray", 0.5)
 translate([0, 0, z_offset_housing_top]) {
-    rotate([0, 180, 0]) {
-        difference() {
-            union() {
-                // Main box body
-                translate([-housing_size/2, -housing_size/2, 0])
-                    cube([housing_size, housing_size, housing_height_top]);
-            }
-            
-            // Cylindrical bore for ring gear
-            translate([0, 0, wall_thickness])
-                cylinder(d = ring_gear_outer_diameter, h = housing_height_top);
-            
-            // Output shaft clearance
-            translate([0, 0, -0.1])
-                cylinder(d = shaft_diameter_output + tolerance_output_bore + 2, 
-                       h = housing_height_top + 0.2);
-            
-            // NEMA17 mounting holes
-            for (angle = [45, 135, 225, 315]) {
-                translate(concat(polar_xy(nema17_hole_spacing/sqrt(2), angle), [-0.1]))
-                    cylinder(d = nema17_hole_diameter + clearance_screw_hole, 
-                           h = housing_height_top + 0.2);
-            }
-            
-            // Corner chamfers (cutting)
-            cutting_width = box_chamfer_size / 2;
-            
-            translate([-housing_size/2 + cutting_width/sqrt(2), 
-                      -housing_size/2 - cutting_width/sqrt(2), 0]) {
-                rotate([0, 0, 45])
-                    corner_chamfer(cutting_width, box_chamfer_size);
-            }
-            
-            translate([housing_size/2 + cutting_width/sqrt(2), 
-                      -housing_size/2 + cutting_width/sqrt(2), 0]) {
-                rotate([0, 0, 135])
-                    corner_chamfer(cutting_width, box_chamfer_size);
-            }
-            
-            translate([-housing_size/2 - cutting_width/sqrt(2), 
-                      housing_size/2 - cutting_width/sqrt(2), 0]) {
-                rotate([0, 0, 315])
-                    corner_chamfer(cutting_width, box_chamfer_size);
-            }
-            
-            translate([housing_size/2 - cutting_width/sqrt(2), 
-                      housing_size/2 + cutting_width/sqrt(2), 0]) {
-                rotate([0, 0, 225])
-                    corner_chamfer(cutting_width, box_chamfer_size);
-            }
-        }
-        
-        // External corner chamfers (additive)
-        chamfer_width = wall_thickness;
-        
-        translate([-housing_size/2 + box_chamfer_size/sqrt(2), -housing_size/2, 0]) {
-            rotate([0, 0, 45])
-                corner_chamfer(chamfer_width, box_chamfer_size);
-        }
-        
-        translate([housing_size/2, -housing_size/2 + box_chamfer_size/sqrt(2), 0]) {
-            rotate([0, 0, 135])
-                corner_chamfer(chamfer_width, box_chamfer_size);
-        }
-        
-        translate([-housing_size/2, housing_size/2 - box_chamfer_size/sqrt(2), 0]) {
-            rotate([0, 0, 315])
-                corner_chamfer(chamfer_width, box_chamfer_size);
-        }
-        
-        translate([housing_size/2 - box_chamfer_size/sqrt(2), housing_size/2, 0]) {
-            rotate([0, 0, 225])
-                corner_chamfer(chamfer_width, box_chamfer_size);
-        }
-    }
+    // Flipped to show flat face (Z=0 in module) towards gear box
+    rotate([0, 180, 0])
+        top_housing_plate(housing_size, wall_thickness, box_chamfer_size);
 }
 
 // ============================================================================
@@ -681,89 +399,19 @@ echo("\n");
 echo("============================================================");
 echo("    PLANETARY GEARBOX PARAMETERS SUMMARY");
 echo("============================================================");
-
 echo("\n=== GEAR RATIO ===");
 echo("Gear Ratio: ", gear_ratio, ":1");
-echo("Formula: (teeth_ring + teeth_sun) / teeth_sun");
 
-echo("\n=== SUN GEAR ===");
-echo("Teeth: ", teeth_sun);
-echo("Pitch radius: ", pitch_radius_sun, " mm");
-echo("Outer radius: ", outer_radius_sun, " mm");
-echo("Shaft diameter: ", shaft_diameter_sun, " mm (D-shaped)");
-echo("Shaft flat height: ", shaft_flat_height, " mm");
-echo("Hub diameter: ", hub_diameter_sun, " mm");
-echo("Hub height: ", hub_height_sun, " mm");
-echo("Setscrew diameter: ", setscrew_sun_diameter, " mm");
-echo("Setscrew clearance: ", setscrew_sun_clearance, " mm");
+echo("\n=== HOUSING (REFACTORED) ===");
+echo("Design Style: Sandwich (Bottom Plate + Ring Gear Body + Top Plate)");
+echo("Housing Size (Square): ", housing_size, " mm");
+echo("Ring Gear (Body) Height: ", ring_gear_thickness, " mm");
+echo("Bottom Plate Thickness: ", wall_thickness, " mm");
+echo("Top Plate Thickness: ", wall_thickness, " mm (plus bearing boss)");
 
-echo("\n=== PLANET GEARS ===");
-echo("Number of planets: 3");
-echo("Teeth per planet: ", teeth_planet);
-echo("Pitch radius: ", pitch_radius_planet, " mm");
-echo("Outer radius: ", outer_radius_planet, " mm");
-echo("Shaft diameter: ", planet_shaft_diameter, " mm");
-echo("Carrier radius: ", carrier_radius, " mm");
-echo("Planet angles: ", planet_angle_1, "°, ", planet_angle_2, "°, ", planet_angle_3, "°");
-echo("Bearing pocket depth (per side): ", planet_bearing_pocket_depth, " mm");
-
-echo("\n=== RING GEAR ===");
-echo("Teeth: ", teeth_ring);
-echo("Pitch radius: ", pitch_radius_ring, " mm");
-echo("Outer radius: ", outer_radius_ring, " mm");
-echo("Outer diameter: ", ring_gear_outer_diameter, " mm");
-echo("Wall thickness: ", ring_gear_wall_thickness, " mm");
-echo("Height: ", ring_gear_thickness, " mm");
-
-echo("\n=== GEAR COMMON ===");
-echo("Module: ", gear_module);
-echo("Thickness: ", gear_thickness, " mm");
-echo("Pressure angle: ", gear_pressure_angle, "°");
-echo("Chamfer height: ", chamfer_height, " mm");
-echo("Chamfer angle: ", chamfer_angle, "°");
-
-echo("\n=== CARRIER ===");
-echo("Plate diameter: ", carrier_plate_diameter, " mm");
-echo("Plate thickness: ", carrier_plate_thickness, " mm");
-echo("Spacing (middle section): ", carrier_spacing, " mm");
-echo("Total height: ", carrier_total_height, " mm");
-echo("Clearance to gears (top/bottom): ", clearance_gear_to_plate, " mm");
-echo("Clearance to planets (radial): ", carrier_to_planets_clearance, " mm");
-echo("Sun insertion bore: ", sun_insertion_bore_diameter, " mm");
-
-echo("\n=== OUTPUT HUB ===");
-echo("Shaft diameter: ", shaft_diameter_output, " mm");
-echo("Hub diameter: ", hub_diameter_output, " mm");
-echo("Hub height: ", hub_height_output, " mm");
-echo("Setscrew diameter: ", setscrew_output_diameter, " mm");
-echo("Setscrew clearance: ", setscrew_output_clearance, " mm");
-echo("Setscrew height position: ", setscrew_output_height, " mm");
-
-echo("\n=== BEARINGS ===");
-echo("Planet bearings (683ZZ): ", bearing_683_od, " mm OD × ", bearing_683_id, " mm ID × ", bearing_683_thickness, " mm thick");
-echo("Number of planet bearings: 6 (2 per planet gear, embedded in planet gears)");
-echo("Sun support bearings (695ZZ): ", bearing_695_od, " mm OD × ", bearing_695_id, " mm ID × ", bearing_695_thickness, " mm thick");
-
-echo("\n=== HOUSING ===");
-echo("Size (square): ", housing_size, " × ", housing_size, " mm");
-echo("Bottom height: ", housing_height_bottom, " mm");
-echo("Top height: ", housing_height_top, " mm");
-echo("Wall thickness: ", wall_thickness, " mm");
-echo("Corner chamfer: ", box_chamfer_size, " mm");
-
-echo("\n=== NEMA17 MOTOR ===");
-echo("Body size: ", nema17_body_size, " mm");
-echo("Hole spacing: ", nema17_hole_spacing, " mm");
-echo("Hole diameter: ", nema17_hole_diameter, " mm");
-echo("Boss diameter: ", nema17_boss_diameter, " mm");
-echo("Boss depth: ", nema17_boss_depth, " mm");
-
-echo("\n=== TOLERANCES ===");
-echo("Bearing pocket clearance: ", clearance_bearing_pocket, " mm");
-echo("Screw hole clearance: ", clearance_screw_hole, " mm");
-echo("Boss center clearance: ", clearance_boss_center, " mm");
-echo("Shaft tolerance: ", tolerance_shaft, " mm");
-echo("Output bore tolerance: ", tolerance_output_bore, " mm");
-echo("Sun insertion clearance: ", clearance_sun_insertion, " mm");
+echo("\n=== BEARING UPDATES ===");
+echo("Top Housing Pocket: 695ZZ (", bearing_695_od, "mm OD x ", bearing_695_thickness, "mm Depth)");
+echo("Bearing Position: Outer Face (requires support if printed flat)");
+echo("Planet Bearings: 683ZZ (Pocketed in gear)");
 
 echo("\n============================================================\n");
