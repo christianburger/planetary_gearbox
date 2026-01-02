@@ -1,11 +1,11 @@
 // ============================================================================
-// 4.67:1 PLANETARY GEARBOX - REFACTORED (BOX RING + BEARING TOP)
+// 4.67:1 PLANETARY GEARBOX - REFACTORED (SEPARATE ASSEMBLY SCREWS)
 // ============================================================================
 // BOSL2 library required
 // Refactored: 
 // 1. Ring gear is main body. 
 // 2. Top/Bottom are lids.
-// 3. Top lid has 695ZZ bearing pocket for output/support.
+// 3. Assembly uses M4 screws at corners (separate from NEMA17 pattern).
 // ============================================================================
 
 include <BOSL2/std.scad>
@@ -17,7 +17,7 @@ $fn = 100;
 // TOLERANCES & CLEARANCES
 // ============================================================================
 clearance_bearing_pocket = 0.3;
-clearance_screw_hole = 0.0;
+clearance_screw_hole = 0.2; // Generic clearance
 clearance_boss_center = 0.3;
 tolerance_shaft = 0.4;
 tolerance_output_bore = 0.4;
@@ -104,23 +104,36 @@ setscrew_output_clearance = 0.6;
 setscrew_output_height = hub_height_output - 3;
 
 // ============================================================================
-// REFACTORED HOUSING & RING PARAMETERS
+// HOUSING & SCREW CONFIGURATION
 // ============================================================================
 wall_thickness = 3;
 
-// The Ring Gear is now the main body height
+// Ring Gear / Body Dimensions
 ring_gear_thickness = carrier_total_height + 1.0; 
-ring_gear_outer_diameter = pitch_radius_ring * 2 + 12;
+//ring_gear_outer_diameter = pitch_radius_ring * 2 + 8;
+ring_gear_outer_diameter = 50 - wall_thickness;
 
-// Housing Size (Square box)
 housing_size = ring_gear_outer_diameter + wall_thickness;
+
 box_chamfer_size = 4; 
 
-// NEMA17 MOTOR
+// NEMA17 MOTOR (Only for Bottom Plate)
 nema17_hole_spacing = 31;
 nema17_hole_diameter = 3.2;
 nema17_boss_diameter = 23;
 nema17_boss_depth = 2.5;
+
+// ASSEMBLY SCREWS (M4 - Top, Ring, Bottom)
+m4_screw_diameter = 4.0;
+diagonal_chamfer_clearance = 3.0;
+
+// Calculate Assembly Screw Radius (Diagonal distance from center)
+// Distance to square corner = size * sqrt(2) / 2
+// Chamfer cuts off corner. Distance lost along diagonal = chamfer_size * sin(45)
+// Position = (Corner_Dist) - (Chamfer_Depth) - (Clearance) - (Hole_Radius)
+dist_to_corner_perfect = (housing_size / 2) * sqrt(2);
+chamfer_depth_diagonal = box_chamfer_size * sqrt(2) / 2;
+assembly_hole_radius = dist_to_corner_perfect - chamfer_depth_diagonal - diagonal_chamfer_clearance - (m4_screw_diameter / 2);
 
 // ============================================================================
 // VISUALIZATION OFFSETS
@@ -128,9 +141,9 @@ nema17_boss_depth = 2.5;
 z_offset_sun = 80;
 z_offset_planets = 88;
 z_offset_carrier = 83;
-z_offset_ring = 120;           // Ring gear (Body)
-z_offset_housing_bottom = 0;   // Bottom Plate
-z_offset_housing_top = 180;    // Top Plate
+z_offset_ring = 120;           
+z_offset_housing_bottom = 0;   
+z_offset_housing_top = 180;    
 
 // ============================================================================
 // HELPER MODULES
@@ -140,23 +153,19 @@ function polar_xy(radius, angle_deg) = [
     radius * sin(angle_deg)
 ];
 
-// Reusable bearing pocket cutter (subtractive)
+// Reusable bearing pocket cutter
 module bearing_pocket_cut(od, depth, clearance) {
     cylinder(d = od + clearance, h = depth + 0.05);
 }
 
-// Reusable shape for Top, Bottom, and Ring Gear external profile
+// Reusable housing profile
 module housing_body_profile(size, height, chamfer_size) {
     difference() {
-        // Main square
         translate([-size/2, -size/2, 0])
             cube([size, size, height]);
 
-        // Corner Chamfers
         cutting_offset = size/2;
-        chamfer_hyp = chamfer_size / sqrt(2);
         
-        // Loop through 4 corners to cut chamfers
         for(r = [0, 90, 180, 270]) {
             rotate([0, 0, r])
                 translate([cutting_offset, cutting_offset, -0.1])
@@ -167,16 +176,31 @@ module housing_body_profile(size, height, chamfer_size) {
     }
 }
 
-// Gear Chamfer Logic
+// Reusable Assembly Screw Pattern (M4 Corners)
+module assembly_screw_holes(radius, screw_diam, height, clearance) {
+    for (angle = [45, 135, 225, 315]) {
+        translate(concat(polar_xy(radius, angle), [-0.1]))
+            cylinder(d = screw_diam + clearance, h = height + 0.2);
+    }
+}
+
+// Reusable NEMA17 Mount Pattern (Motor Mount Only)
+module nema17_mount_holes(spacing, screw_diam, height, clearance) {
+    // Spacing is side length, radius is spacing / sqrt(2)
+    radius = spacing / sqrt(2);
+    for (angle = [45, 135, 225, 315]) {
+        translate(concat(polar_xy(radius, angle), [-0.1]))
+            cylinder(d = screw_diam + clearance, h = height + 0.2);
+    }
+}
+
 module gear_chamfer(gear_thickness, outer_radius, chamfer_base_radius, chamfer_height) {
-    // Top
     difference() {
         translate([0, 0, gear_thickness/2 - chamfer_height])
             cylinder(d = outer_radius * 2 + 4, h = chamfer_height + 5);
         translate([0, 0, gear_thickness/2 - chamfer_height])
             cylinder(r1 = outer_radius + 2, r2 = chamfer_base_radius, h = chamfer_height);
     }
-    // Bottom
     mirror([0, 0, 1])
         difference() {
             translate([0, 0, gear_thickness/2 - chamfer_height])
@@ -217,19 +241,9 @@ module sun_gear(teeth, mod, thickness, pressure_angle, shaft_diam, shaft_flat_he
 module planet_gear(teeth, mod, thickness, pressure_angle, shaft_diam, tolerance_shaft, outer_radius, chamfer_base_radius, chamfer_height, bearing_od, bearing_id, bearing_pocket_depth, clearance_bearing) {
     difference() {
         spur_gear(mod = mod, teeth = teeth, thickness = thickness, shaft_diam = shaft_diam + tolerance_shaft, pressure_angle = pressure_angle);
-        
-        // Through bore
-        translate([0, 0, -thickness/2 - 0.1]) 
-            cylinder(d = bearing_id + tolerance_shaft, h = thickness + 0.2);
-            
-        // Bottom Bearing Pocket (Using Module)
-        translate([0, 0, -thickness/2 - 0.01])
-            bearing_pocket_cut(bearing_od, bearing_pocket_depth, clearance_bearing);
-            
-        // Top Bearing Pocket (Using Module)
-        translate([0, 0, thickness/2 - bearing_pocket_depth])
-            bearing_pocket_cut(bearing_od, bearing_pocket_depth, clearance_bearing);
-            
+        translate([0, 0, -thickness/2 - 0.1]) cylinder(d = bearing_id + tolerance_shaft, h = thickness + 0.2);
+        translate([0, 0, -thickness/2 - 0.01]) bearing_pocket_cut(bearing_od, bearing_pocket_depth, clearance_bearing);
+        translate([0, 0, thickness/2 - bearing_pocket_depth]) bearing_pocket_cut(bearing_od, bearing_pocket_depth, clearance_bearing);
         gear_chamfer(thickness, outer_radius, chamfer_base_radius, chamfer_height);
     }
 }
@@ -271,19 +285,10 @@ module ring_gear_box_body(teeth, mod, thickness, pressure_angle, housing_size, c
         
         // Internal Gear Teeth
         translate([0, 0, thickness / 2])
-            spur_gear(
-                mod = mod,
-                teeth = teeth,
-                thickness = thickness + 0.1, 
-                shaft_diam = 0,
-                pressure_angle = pressure_angle
-            );
+            spur_gear(mod = mod, teeth = teeth, thickness = thickness + 0.1, shaft_diam = 0, pressure_angle = pressure_angle);
             
-        // Through-holes for NEMA17 screws
-        for (angle = [45, 135, 225, 315]) {
-            translate(concat(polar_xy(nema17_hole_spacing/sqrt(2), angle), [-0.1]))
-                cylinder(d = nema17_hole_diameter + clearance_screw_hole, h = thickness + 0.2);
-        }
+        // NEW: M4 Assembly Holes Only (No NEMA holes)
+        assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness, clearance_screw_hole);
     }
 }
 
@@ -299,11 +304,11 @@ module bottom_housing_plate(size, thickness, chamfer_size) {
         translate([0, 0, -0.1])
             cylinder(d = shaft_diameter_sun + tolerance_shaft + 2, h = thickness + 0.2);
             
-        // Mounting Holes
-        for (angle = [45, 135, 225, 315]) {
-            translate(concat(polar_xy(nema17_hole_spacing/sqrt(2), angle), [-0.1]))
-                cylinder(d = nema17_hole_diameter + clearance_screw_hole, h = thickness + 0.2);
-        }
+        // NEMA17 Holes (Inner Pattern) - Kept for motor mount
+        nema17_mount_holes(nema17_hole_spacing, nema17_hole_diameter, thickness, clearance_screw_hole);
+
+        // NEW: M4 Assembly Holes (Outer Pattern) - Added to mate with Ring/Top
+        assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness, clearance_screw_hole);
     }
 }
 
@@ -312,28 +317,22 @@ module top_housing_plate(size, thickness, chamfer_size) {
         union() {
             // Base plate
             housing_body_profile(size, thickness, chamfer_size);
-            
-            // BEARING BOSS (Added to Top/Outer Face)
-            // Adds material to support the bearing thickness
+            // Bearing Boss (Outer Face)
             translate([0, 0, thickness - 0.01])
                 cylinder(d = bearing_695_od + 2*wall_thickness, h = bearing_695_thickness);
         }
         
-        // Center Clearance Hole (for shaft passing through bearing)
-        // Uses bearing ID + 0.5mm clearance
+        // Center Clearance Hole
         translate([0, 0, -0.1])
             cylinder(d = bearing_695_id + 0.5, h = thickness + bearing_695_thickness + 0.2);
             
-        // BEARING POCKET (Top/Outer Face)
-        // Uses the reusable module
+        // Bearing Pocket (Outer Face)
         translate([0, 0, thickness + bearing_695_thickness - bearing_695_thickness])
              bearing_pocket_cut(bearing_695_od, bearing_695_thickness, clearance_bearing_pocket);
             
-        // Mounting Holes
-        for (angle = [45, 135, 225, 315]) {
-            translate(concat(polar_xy(nema17_hole_spacing/sqrt(2), angle), [-0.1]))
-                cylinder(d = nema17_hole_diameter + clearance_screw_hole, h = thickness + bearing_695_thickness + 0.2);
-        }
+        // NEW: M4 Assembly Holes Only (No NEMA holes)
+        // Note: Height must include the boss thickness just in case, though screws are at corners
+        assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness + bearing_695_thickness, clearance_screw_hole);
     }
 }
 
@@ -353,7 +352,6 @@ for (angle = [planet_angle_1, planet_angle_2, planet_angle_3]) {
     translate(concat(polar_xy(carrier_radius, angle), [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate])) {
         planet_gear(teeth_planet, gear_module, gear_thickness, gear_pressure_angle, planet_shaft_diameter, tolerance_shaft, outer_radius_planet, chamfer_base_radius_planet, chamfer_height, bearing_683_od, bearing_683_id, planet_bearing_pocket_depth, clearance_bearing_pocket);
     }
-    // Planet Shafts Visual
     color("dimgray")
     translate(concat(polar_xy(carrier_radius, angle), [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate]))
         cylinder(d = planet_shaft_diameter, h = gear_thickness);
@@ -368,14 +366,7 @@ translate([0, 0, z_offset_carrier]) {
 // RING GEAR BODY (Red)
 color("red", 0.7)
 translate([0, 0, z_offset_ring]) {
-    ring_gear_box_body(
-        teeth = teeth_ring,
-        mod = gear_module,
-        thickness = ring_gear_thickness,
-        pressure_angle = gear_pressure_angle,
-        housing_size = housing_size,
-        chamfer_size = box_chamfer_size
-    );
+    ring_gear_box_body(teeth_ring, gear_module, ring_gear_thickness, gear_pressure_angle, housing_size, box_chamfer_size);
 }
 
 // BOTTOM HOUSING PLATE (Gray)
@@ -387,7 +378,6 @@ translate([0, 0, z_offset_housing_bottom]) {
 // TOP HOUSING PLATE (Gray)
 color("gray", 0.5)
 translate([0, 0, z_offset_housing_top]) {
-    // Flipped to show flat face (Z=0 in module) towards gear box
     rotate([0, 180, 0])
         top_housing_plate(housing_size, wall_thickness, box_chamfer_size);
 }
@@ -399,19 +389,16 @@ echo("\n");
 echo("============================================================");
 echo("    PLANETARY GEARBOX PARAMETERS SUMMARY");
 echo("============================================================");
-echo("\n=== GEAR RATIO ===");
 echo("Gear Ratio: ", gear_ratio, ":1");
-
-echo("\n=== HOUSING (REFACTORED) ===");
-echo("Design Style: Sandwich (Bottom Plate + Ring Gear Body + Top Plate)");
-echo("Housing Size (Square): ", housing_size, " mm");
-echo("Ring Gear (Body) Height: ", ring_gear_thickness, " mm");
-echo("Bottom Plate Thickness: ", wall_thickness, " mm");
-echo("Top Plate Thickness: ", wall_thickness, " mm (plus bearing boss)");
-
-echo("\n=== BEARING UPDATES ===");
-echo("Top Housing Pocket: 695ZZ (", bearing_695_od, "mm OD x ", bearing_695_thickness, "mm Depth)");
-echo("Bearing Position: Outer Face (requires support if printed flat)");
-echo("Planet Bearings: 683ZZ (Pocketed in gear)");
-
-echo("\n============================================================\n");
+echo("Housing Size: ", housing_size, " mm Square");
+echo("\n=== MOUNTING PATTERNS ===");
+echo("1. Motor Mount (Bottom Plate Only): NEMA17 Standard (31mm spacing, M3)");
+echo("2. Case Assembly (Top+Ring+Bottom): M", m4_screw_diameter, " Screws");
+echo("   - Position: Corners, 45-degree diagonal");
+echo("   - Radius from center: ", assembly_hole_radius, " mm");
+echo("   - Clearance to Chamfer: ", diagonal_chamfer_clearance, " mm");
+echo("   - Note: Bottom plate contains BOTH patterns.");
+echo("\n=== BEARING CONFIG ===");
+echo("Output: 695ZZ in Top Plate (Outer Boss)");
+echo("Planets: 683ZZ (x6) embedded in gears");
+echo("============================================================\n");
