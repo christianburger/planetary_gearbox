@@ -16,7 +16,7 @@ $fn = 100;
 // ============================================================================
 // TOLERANCES & CLEARANCES
 // ============================================================================
-clearance_bearing_pocket = 0.3;
+clearance_bearing_pocket = 0.2;
 clearance_screw_hole = 0.2; // Generic clearance
 clearance_boss_center = 0.3;
 tolerance_shaft = 0.4;
@@ -107,6 +107,7 @@ setscrew_output_height = hub_height_output - 3;
 // HOUSING & SCREW CONFIGURATION
 // ============================================================================
 wall_thickness = 3;
+housing_wall_height_clearance = 4; 
 
 // Ring Gear / Body Dimensions
 ring_gear_thickness = carrier_total_height + 1.0; 
@@ -168,9 +169,10 @@ ref_ring_angle = 8;  // Adjust to rotate ring gear teeth for alignment
 z_offset_sun = 80;
 z_offset_planets = 88;
 z_offset_carrier = 83;
-z_offset_ring = 120;           
+z_offset_ring = 140;           
 z_offset_housing_bottom = 0;   
 z_offset_housing_top = 180;    
+z_offset_housing_wall = z_offset_carrier + carrier_total_height;
 
 // ============================================================================
 // HELPER MODULES
@@ -220,6 +222,8 @@ module nema17_mount_holes(spacing, screw_diam, height, clearance) {
             cylinder(d = screw_diam + clearance, h = height + 0.2);
     }
 }
+
+
 
 module gear_chamfer(gear_thickness, outer_radius, chamfer_base_radius, chamfer_height) {
     difference() {
@@ -357,8 +361,8 @@ module bottom_housing_plate(size, thickness, chamfer_size) {
         housing_body_profile(size, thickness, chamfer_size);
         
         // NEMA17 Boss Recess
-        translate([0, 0, -0.1])
-            cylinder(d = nema17_boss_diameter, h = nema17_boss_depth + 0.1);
+        translate([0, 0, 0])
+            cylinder(d = nema17_boss_diameter, h = thickness);
             
         // Sun Shaft / Motor Shaft Hole
         translate([0, 0, -0.1])
@@ -371,6 +375,7 @@ module bottom_housing_plate(size, thickness, chamfer_size) {
         assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness, clearance_screw_hole);
     }
 }
+
 
 module top_housing_plate(size, thickness, chamfer_size) {
     difference() {
@@ -396,14 +401,36 @@ module top_housing_plate(size, thickness, chamfer_size) {
     }
 }
 
-// ============================================================================
-// INSTANTIATION
-// ============================================================================
 
-// ============================================================================
-// INSTANTIATION
-// ============================================================================
+// Cross removal pattern module
+module cross_removal_pattern(size, arm_width, height) {
+    // Horizontal arm
+    translate([-arm_width/2, -size/2 - 0.1, 0])
+        cube([arm_width, size + 0.2, height + 0.1]);
+    
+    // Vertical arm
+    translate([-size/2 - 0.1, -arm_width/2, 0])
+        cube([size + 0.2, arm_width, height + 0.1]);
+}
 
+module housing_wall(size, thickness, chamfer_size) {
+  internal_removal_profile_size = size - m4_screw_diameter * 4;
+  difference() {
+      housing_body_profile(size, thickness, chamfer_size);
+      housing_body_profile(internal_removal_profile_size, thickness, chamfer_size);
+      assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness +   bearing_695_thickness, clearance_screw_hole);
+      // Cross pattern removal (leaves 4 corner legs)
+      cross_arm_width = housing_size - m4_screw_diameter * 4 - wall_thickness * 2 + 0.4;
+      cross_arm_height = thickness;
+      size= housing_size;
+      translate([0, 0, 0]) {
+        cross_removal_pattern(size - wall_thickness, cross_arm_width, cross_arm_height);
+      }
+
+
+  }
+}
+    
 // 1. SUN GEAR (Fixed at Reference Angle)
 color("lightblue")
 rotate([0, 0, ref_sun_angle]) { // Uses the 9.5 variable
@@ -442,7 +469,7 @@ for (i = [0 : len(planet_angles_list)-1]) {
 
 // 3. CARRIER
 color("lightgreen")
-translate([220, 0, z_offset_carrier]) {
+translate([20, 0, z_offset_carrier]) {
     carrier(
         plate_diam = carrier_plate_diameter, 
         plate_thickness = carrier_plate_thickness, 
@@ -472,34 +499,16 @@ translate([0, 0, z_offset_ring]) {
 
 // BOTTOM HOUSING PLATE (Gray)
 color("gray", 0.5)
-translate([220, 0, z_offset_housing_bottom]) {
+translate([20, 0, z_offset_housing_bottom]) {
     bottom_housing_plate(housing_size, wall_thickness, box_chamfer_size);
 }
 
 // TOP HOUSING PLATE (Gray)
 color("gray", 0.5)
-translate([220, 0, z_offset_housing_top]) {
+translate([20, 0, z_offset_housing_top]) {
     rotate([0, 180, 0])
         top_housing_plate(housing_size, wall_thickness, box_chamfer_size);
 }
-
-// ============================================================================
-// PARAMETERS SUMMARY
-// ============================================================================
-echo("\n");
-echo("============================================================");
-echo("    PLANETARY GEARBOX PARAMETERS SUMMARY");
-echo("============================================================");
-echo("Gear Ratio: ", gear_ratio, ":1");
-echo("Housing Size: ", housing_size, " mm Square");
-echo("\n=== MOUNTING PATTERNS ===");
-echo("1. Motor Mount (Bottom Plate Only): NEMA17 Standard (31mm spacing, M3)");
-echo("2. Case Assembly (Top+Ring+Bottom): M", m4_screw_diameter, " Screws");
-echo("   - Position: Corners, 45-degree diagonal");
-echo("   - Radius from center: ", assembly_hole_radius, " mm");
-echo("   - Clearance to Chamfer: ", diagonal_chamfer_clearance, " mm");
-echo("   - Note: Bottom plate contains BOTH patterns.");
-echo("\n=== BEARING CONFIG ===");
-echo("Output: 695ZZ in Top Plate (Outer Boss)");
-echo("Planets: 683ZZ (x6) embedded in gears");
-echo("============================================================\n");
+translate([40, 0, z_offset_housing_wall]) {
+  housing_wall(housing_size, hub_height_output + housing_wall_height_clearance, box_chamfer_size);
+}
