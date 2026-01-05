@@ -155,6 +155,9 @@ calculated_carrier_radius = pitch_radius_sun + pitch_radius_planet + gear_mesh_c
 // Sun Clearance Hole: Ensures the sun gear can spin freely inside the carrier
 sun_clearance_hole_diam = outer_radius_sun * 2 + 5.0; 
 
+// Planet gear angle
+planet_angles_list = [planet_angle_1, planet_angle_2, planet_angle_3];
+
 // PHASING LOGIC
 ref_sun_angle = 10; 
 planet_phase_rotation = 0;
@@ -430,7 +433,11 @@ module housing_wall(size, thickness, chamfer_size) {
 
   }
 }
-    
+ 
+// ============================================================================
+// PART INSTANTIATION
+// ============================================================================
+ 
 // 1. SUN GEAR (Fixed at Reference Angle)
 color("lightblue")
 rotate([0, 0, ref_sun_angle]) { // Uses the 9.5 variable
@@ -443,8 +450,7 @@ rotate([0, 0, ref_sun_angle]) { // Uses the 9.5 variable
 }
 
 // 2. PLANET GEARS (Phased correctly)
-planet_angles_list = [planet_angle_1, planet_angle_2, planet_angle_3];
-
+color("yellow")
 for (i = [0 : len(planet_angles_list)-1]) {
     angle = planet_angles_list[i];
     
@@ -452,7 +458,7 @@ for (i = [0 : len(planet_angles_list)-1]) {
     pos = concat(polar_xy(calculated_carrier_radius, angle), 
                  [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate]);
 
-    color("yellow")
+
     translate(pos) {
         // Rotate: Planet Angle + Phasing Calculation
         rotate([0, 0, angle + planet_phase_rotation]) 
@@ -462,9 +468,6 @@ for (i = [0 : len(planet_angles_list)-1]) {
             bearing_683_od, planet_bearing_pocket_depth);
     }
     
-    // Axles
-    color("dimgray")
-    translate(pos) cylinder(d = planet_shaft_diameter, h = gear_thickness);
 }
 
 // 3. CARRIER
@@ -495,7 +498,6 @@ translate([0, 0, z_offset_ring]) {
     ring_gear_box_body(teeth_ring, gear_module, ring_gear_thickness, gear_pressure_angle, 
                        housing_size, box_chamfer_size, ref_ring_angle, ring_mesh_clearance);
 }
-
 
 // BOTTOM HOUSING PLATE (Gray)
 color("gray", 0.5)

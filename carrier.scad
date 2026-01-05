@@ -155,6 +155,9 @@ calculated_carrier_radius = pitch_radius_sun + pitch_radius_planet + gear_mesh_c
 // Sun Clearance Hole: Ensures the sun gear can spin freely inside the carrier
 sun_clearance_hole_diam = outer_radius_sun * 2 + 5.0; 
 
+// Planet gear angle
+planet_angles_list = [planet_angle_1, planet_angle_2, planet_angle_3];
+
 // PHASING LOGIC
 ref_sun_angle = 10; 
 planet_phase_rotation = 0;
@@ -430,46 +433,14 @@ module housing_wall(size, thickness, chamfer_size) {
 
   }
 }
-    
-// 1. SUN GEAR (Fixed at Reference Angle)
-color("lightblue")
-rotate([0, 0, ref_sun_angle]) { // Uses the 9.5 variable
-    translate([0, 0, z_offset_sun]) {
-        sun_gear(teeth_sun, gear_module, gear_thickness, gear_pressure_angle, 
-            shaft_diameter_sun, shaft_flat_height, hub_diameter_sun, hub_height_sun, 
-            tolerance_shaft, setscrew_sun_diameter, setscrew_sun_clearance, 
-            outer_radius_sun, chamfer_base_radius_sun, chamfer_height);
-    }
-}
-
-// 2. PLANET GEARS (Phased correctly)
-planet_angles_list = [planet_angle_1, planet_angle_2, planet_angle_3];
-
-for (i = [0 : len(planet_angles_list)-1]) {
-    angle = planet_angles_list[i];
-    
-    // Position using the CALCULATED radius
-    pos = concat(polar_xy(calculated_carrier_radius, angle), 
-                 [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate]);
-
-    color("yellow")
-    translate(pos) {
-        // Rotate: Planet Angle + Phasing Calculation
-        rotate([0, 0, angle + planet_phase_rotation]) 
-        planet_gear(teeth_planet, gear_module, gear_thickness, gear_pressure_angle, 
-            planet_shaft_diameter, tolerance_shaft, outer_radius_planet, 
-            chamfer_base_radius_planet, chamfer_height, 
-            bearing_683_od, planet_bearing_pocket_depth);
-    }
-    
-    // Axles
-    color("dimgray")
-    translate(pos) cylinder(d = planet_shaft_diameter, h = gear_thickness);
-}
+ 
+// ============================================================================
+// PART INSTANTIATION
+// ============================================================================
 
 // 3. CARRIER
 color("lightgreen")
-translate([20, 0, z_offset_carrier]) {
+translate([0, 0, 0]) {
     carrier(
         plate_diam = carrier_plate_diameter, 
         plate_thickness = carrier_plate_thickness, 
@@ -487,28 +458,4 @@ translate([20, 0, z_offset_carrier]) {
         planet_outer_diam = outer_radius_planet * 2,  // <--- NEW
         planet_clearance = carrier_to_planets_clearance  // <--- NEW
     );
-}
-
-// RING GEAR BODY (Red)
-color("red", 0.7)
-translate([0, 0, z_offset_ring]) {
-    ring_gear_box_body(teeth_ring, gear_module, ring_gear_thickness, gear_pressure_angle, 
-                       housing_size, box_chamfer_size, ref_ring_angle, ring_mesh_clearance);
-}
-
-
-// BOTTOM HOUSING PLATE (Gray)
-color("gray", 0.5)
-translate([20, 0, z_offset_housing_bottom]) {
-    bottom_housing_plate(housing_size, wall_thickness, box_chamfer_size);
-}
-
-// TOP HOUSING PLATE (Gray)
-color("gray", 0.5)
-translate([20, 0, z_offset_housing_top]) {
-    rotate([0, 180, 0])
-        top_housing_plate(housing_size, wall_thickness, box_chamfer_size);
-}
-translate([40, 0, z_offset_housing_wall]) {
-  housing_wall(housing_size, hub_height_output + housing_wall_height_clearance, box_chamfer_size);
 }
