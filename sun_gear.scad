@@ -613,6 +613,14 @@ module ring_gear_box_body(
             z_start            = 0   // subtract full overlap
         );
 
+        // NEMA17 Holes
+        nema17_mount_holes(
+            nema17_hole_spacing,
+            nema17_hole_diameter * 2,
+            7,
+            clearance_screw_hole
+        );
+        
         // =============================================================
         // M4 assembly holes (unchanged)
         // =============================================================
@@ -623,11 +631,11 @@ module ring_gear_box_body(
             clearance_screw_hole
         );
         
-        //        // =============================================================
-//        // Mid-height M4 hex nut traps
-//        // EXACTLY same position as assembly_screw_holes
-//        // =============================================================
-//        
+        // =============================================================
+        // Mid-height M4 hex nut traps
+        // EXACTLY same position as assembly_screw_holes
+        // =============================================================
+        
         nut_height_clearance = 12;
         translate([0, 0, thickness / 2 - nut_height_clearance / 2])
             assembly_screw_holes(
