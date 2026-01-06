@@ -16,7 +16,7 @@ $fn = 100;
 // ============================================================================
 // TOLERANCES & CLEARANCES
 // ============================================================================
-clearance_bearing_pocket = 0.2;
+clearance_bearing_pocket = 0.1;
 clearance_screw_hole = 0.2; // Generic clearance
 clearance_boss_center = 0.3;
 tolerance_shaft = 0.4;
@@ -425,12 +425,9 @@ module housing_wall(size, thickness, chamfer_size) {
       // Cross pattern removal (leaves 4 corner legs)
       cross_arm_width = housing_size - m4_screw_diameter * 4 - wall_thickness * 2 + 0.4;
       cross_arm_height = thickness;
-      size= housing_size;
       translate([0, 0, 0]) {
         cross_removal_pattern(size - wall_thickness, cross_arm_width, cross_arm_height);
       }
-
-
   }
 }
  
@@ -440,36 +437,38 @@ module housing_wall(size, thickness, chamfer_size) {
  
 // 1. SUN GEAR (Fixed at Reference Angle)
 color("lightblue")
-rotate([0, 0, ref_sun_angle]) { // Uses the 9.5 variable
-    translate([0, 0, z_offset_sun]) {
-        sun_gear(teeth_sun, gear_module, gear_thickness, gear_pressure_angle, 
-            shaft_diameter_sun, shaft_flat_height, hub_diameter_sun, hub_height_sun, 
-            tolerance_shaft, setscrew_sun_diameter, setscrew_sun_clearance, 
-            outer_radius_sun, chamfer_base_radius_sun, chamfer_height);
-    }
+translate([0, 40, z_offset_sun]) {
+  rotate([0, 0, ref_sun_angle]) { // Uses the 9.5 variable
+      translate([0, 0, z_offset_sun]) {
+          sun_gear(teeth_sun, gear_module, gear_thickness, gear_pressure_angle, 
+              shaft_diameter_sun, shaft_flat_height, hub_diameter_sun, hub_height_sun, 
+              tolerance_shaft, setscrew_sun_diameter, setscrew_sun_clearance, 
+              outer_radius_sun, chamfer_base_radius_sun, chamfer_height);
+      }
+  }
 }
 
 // 2. PLANET GEARS (Phased correctly)
 color("yellow")
-for (i = [0 : len(planet_angles_list)-1]) {
-    angle = planet_angles_list[i];
-    
-    // Position using the CALCULATED radius
-    pos = concat(polar_xy(calculated_carrier_radius, angle), 
-                 [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate]);
+translate([0, 40, z_offset_planets]) {
+  for (i = [0 : len(planet_angles_list)-1]) {
+      angle = planet_angles_list[i];
+   
+      // Position using the CALCULATED radius
+      pos = concat(polar_xy(calculated_carrier_radius, angle), 
+                   [z_offset_planets + carrier_plate_thickness + clearance_gear_to_plate]);
 
-
-    translate(pos) {
-        // Rotate: Planet Angle + Phasing Calculation
-        rotate([0, 0, angle + planet_phase_rotation]) 
-        planet_gear(teeth_planet, gear_module, gear_thickness, gear_pressure_angle, 
-            planet_shaft_diameter, tolerance_shaft, outer_radius_planet, 
-            chamfer_base_radius_planet, chamfer_height, 
-            bearing_683_od, planet_bearing_pocket_depth);
-    }
-    
+      translate(pos) {
+          // Rotate: Planet Angle + Phasing Calculation
+          rotate([0, 0, angle + planet_phase_rotation]) 
+          planet_gear(teeth_planet, gear_module, gear_thickness, gear_pressure_angle, 
+              planet_shaft_diameter, tolerance_shaft, outer_radius_planet, 
+              chamfer_base_radius_planet, chamfer_height, 
+              bearing_683_od, planet_bearing_pocket_depth);
+      }
+      
+  }
 }
-
 // 3. CARRIER
 color("lightgreen")
 translate([20, 0, z_offset_carrier]) {
@@ -494,7 +493,7 @@ translate([20, 0, z_offset_carrier]) {
 
 // RING GEAR BODY (Red)
 color("red", 0.7)
-translate([0, 0, z_offset_ring]) {
+translate([0, 40, z_offset_ring]) {
     ring_gear_box_body(teeth_ring, gear_module, ring_gear_thickness, gear_pressure_angle, 
                        housing_size, box_chamfer_size, ref_ring_angle, ring_mesh_clearance);
 }
@@ -511,6 +510,8 @@ translate([20, 0, z_offset_housing_top]) {
     rotate([0, 180, 0])
         top_housing_plate(housing_size, wall_thickness, box_chamfer_size);
 }
+
+// HOUSING WALL (Gray)
 translate([40, 0, z_offset_housing_wall]) {
-  housing_wall(housing_size, hub_height_output + housing_wall_height_clearance, box_chamfer_size);
+  housing_wall(housing_size, carrier_total_height + housing_wall_height_clearance, box_chamfer_size);
 }

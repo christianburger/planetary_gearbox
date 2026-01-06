@@ -425,19 +425,17 @@ module housing_wall(size, thickness, chamfer_size) {
       // Cross pattern removal (leaves 4 corner legs)
       cross_arm_width = housing_size - m4_screw_diameter * 4 - wall_thickness * 2 + 0.4;
       cross_arm_height = thickness;
-      size= housing_size;
       translate([0, 0, 0]) {
         cross_removal_pattern(size - wall_thickness, cross_arm_width, cross_arm_height);
       }
-
-
   }
 }
  
 // ============================================================================
 // PART INSTANTIATION
 // ============================================================================
- 
+
+// HOUSING WALL (Gray)
 translate([0, 0, 0]) {
-  housing_wall(housing_size, hub_height_output + housing_wall_height_clearance, box_chamfer_size);
+  housing_wall(housing_size, carrier_total_height + housing_wall_height_clearance, box_chamfer_size);
 }

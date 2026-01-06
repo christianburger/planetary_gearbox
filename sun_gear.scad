@@ -425,12 +425,9 @@ module housing_wall(size, thickness, chamfer_size) {
       // Cross pattern removal (leaves 4 corner legs)
       cross_arm_width = housing_size - m4_screw_diameter * 4 - wall_thickness * 2 + 0.4;
       cross_arm_height = thickness;
-      size= housing_size;
       translate([0, 0, 0]) {
         cross_removal_pattern(size - wall_thickness, cross_arm_width, cross_arm_height);
       }
-
-
   }
 }
  
