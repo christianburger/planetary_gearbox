@@ -50,6 +50,7 @@ gear_ratio = (teeth_ring + teeth_sun) / teeth_sun;
 // Gear chamfers
 chamfer_height = 2.0;
 chamfer_angle = 45;
+
 chamfer_base_radius_sun = outer_radius_sun - chamfer_height * tan(chamfer_angle);
 chamfer_base_radius_planet = outer_radius_planet - chamfer_height * tan(chamfer_angle);
 
@@ -91,7 +92,7 @@ planet_angle_3 = 240;
 carrier_plate_thickness = 6;
 carrier_plate_diameter = pitch_radius_ring * 2 - 4;
 clearance_gear_to_plate = 1.5;
-carrier_to_planets_clearance = 5;   
+carrier_to_planets_clearance = 3;   
 carrier_spacing = gear_thickness + clearance_gear_to_plate * 2;
 carrier_total_height = carrier_plate_thickness * 2 + carrier_spacing;
 
@@ -616,7 +617,7 @@ module ring_gear_box_body(
         // NEMA17 Holes
         nema17_mount_holes(
             nema17_hole_spacing,
-            nema17_hole_diameter * 2,
+            nema17_hole_diameter * 2.2,
             7,
             clearance_screw_hole
         );
@@ -847,7 +848,7 @@ module top_housing_plate(size, thickness, chamfer_size) {
             cylinder(d = bearing_695_id + 0.5, h = thickness + bearing_695_thickness + 0.2);
             
         // Bearing Pocket (Outer Face)
-        translate([0, 0, thickness + bearing_695_thickness - bearing_695_thickness])
+        translate([0, 0, thickness])
              bearing_pocket_cut(bearing_695_od, bearing_695_thickness, clearance_bearing_pocket);
             
         // NEW: M4 Assembly Holes Only (No NEMA holes)
