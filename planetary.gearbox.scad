@@ -29,7 +29,7 @@ teeth_sun = 9;           // Sun gear (input)
 teeth_planet = 12;       // Planet gears (3x)
 teeth_ring = 33;         // Ring gear (fixed)
 
-gear_module = 1.156;
+gear_module = 0.95;
 gear_thickness = 10;
 gear_pressure_angle = 20;
 
@@ -107,9 +107,9 @@ setscrew_output_height = hub_height_output - 3;
 // ============================================================================
 // HOUSING & SCREW CONFIGURATION
 // ============================================================================
-wall_thickness = 3;
+wall_thickness = 4;
 housing_wall_height_clearance = 4; 
-blade_thickness = 2;
+blade_thickness = 0;
 blade_length = 15;
 blade_to_screw_clearance = 5;
 
@@ -120,7 +120,7 @@ ring_gear_outer_diameter = 50 - wall_thickness;
 
 housing_size = ring_gear_outer_diameter + wall_thickness;
 
-box_chamfer_size = 4; 
+box_chamfer_size = 5; 
 
 // NEMA17 MOTOR (Only for Bottom Plate)
 nema17_hole_spacing = 31;
@@ -614,14 +614,22 @@ module ring_gear_box_body(
             z_start            = 0   // subtract full overlap
         );
 
-        // NEMA17 Holes
-        nema17_mount_holes(
-            nema17_hole_spacing,
-            nema17_hole_diameter * 2.2,
-            7,
-            clearance_screw_hole
-        );
-        
+         m3_nut_af     = 5.5;   // across flats (ISO 4032)
+         m3_nut_height = 2.4;   // nut thickness
+         nema17_r = nema17_hole_spacing / sqrt(2);
+         for (angle = [45, 135, 225, 315]) {
+             translate(concat(polar_xy(nema17_r, angle), [-0.1])) {
+                 // Through-hole (full ring body depth)
+                 cylinder(d = nema17_hole_diameter + clearance_screw_hole,
+                          h = thickness + 0.2);
+                 // Hex nut pocket on the far (top) face
+                 translate([0, 0, thickness - m3_nut_height])
+                     cylinder(d = m3_nut_af / cos(30) + 0.3,
+                              h = m3_nut_height + 0.2,
+                              $fn = 6);                              
+                      }
+        }
+       
         // =============================================================
         // M4 assembly holes (unchanged)
         // =============================================================
@@ -649,115 +657,6 @@ module ring_gear_box_body(
 
     }
 }
-
-
-//
-//module ring_gear_box_body(
-//    teeth, mod, thickness, pressure_angle,
-//    housing_size, chamfer_size,
-//    ring_rotation, mesh_clearance
-//) {
-//
-//    inner_clearance_radius =
-//        outer_radius_sun
-//        + 2 * sin(120) * outer_radius_planet
-//        + 4 * mesh_clearance;
-//
-//    profile_shift = 0.57;
-//
-//    nema17_hole_spacing = 31;        // center-to-center
-//    nema17_hole_offset  = nema17_hole_spacing / 2;
-//
-//    difference() {
-//        union() {
-//
-//            // =============================================================
-//            // External Housing
-//            // =============================================================
-//            difference() {
-//                housing_body_profile(housing_size, thickness, chamfer_size);
-//                cylinder(r = inner_clearance_radius, h = thickness + 0.2);
-//            }
-//
-//            // =============================================================
-//            // Physical Ring Gear (positive geometry)
-//            // =============================================================
-//            translate([0, 0, thickness / 2])
-//                rotate([0, 0, ring_rotation])
-//                    ring_gear(
-//                        mod            = mod,
-//                        teeth          = teeth,
-//                        thickness      = thickness,
-//                        pressure_angle = pressure_angle,
-//                        backing        = wall_thickness,
-//                        profile_shift  = profile_shift
-//                    );
-//        }
-//
-//        // =============================================================
-//        // M4 Assembly Holes (existing)
-//        // =============================================================
-//        assembly_screw_holes(
-//            assembly_hole_radius,
-//            m4_screw_diameter,
-//            thickness,
-//            clearance_screw_hole
-//        );
-//
-//        // =============================================================
-//        // Mid-height M4 hex nut traps
-//        // EXACTLY same position as assembly_screw_holes
-//        // =============================================================
-//        
-//        nut_height_clearance = 12;
-//        translate([0, 0, thickness / 2 - nut_height_clearance / 2])
-//            assembly_screw_holes(
-//                assembly_hole_radius + 4,
-//                8.2,        // M4 hex nut across flats + clearance
-//                nut_height_clearance,        
-//                0,
-//                $fn = 6
-//            );
-//
-//
-//    }
-//}
-//                 
-
-
-//
-//module ring_gear_box_body(teeth, mod, thickness, pressure_angle, housing_size, chamfer_size, ring_rotation, mesh_clearance) {
-//
-//    inner_clearance_radius = outer_radius_sun +  2 * sin(120) * outer_radius_planet + 4 * mesh_clearance;
-//    
-//    profile_shift = 0.57; 
-//    
-//    difference() {
-//        union() {
-//            // External Housing Shape
-//            difference() {
-//              housing_body_profile(housing_size, thickness, chamfer_size);
-//              cylinder(r = inner_clearance_radius, h = thickness + 0.2);
-//            }
-//            // ADD the physical ring gear as a positive feature
-//            translate([0, 0, thickness / 2]) {
-//                rotate([0, 0, ring_rotation]) {
-//                  ring_gear( mod = mod, 
-//                  teeth = teeth, 
-//                  thickness = thickness, 
-//                  pressure_angle = pressure_angle, 
-//                  backing = wall_thickness, 
-//                  profile_shift = profile_shift );
-//
-//
-//                }
-//            }
-//        }
-//        
-//        // M4 Assembly Holes
-//        assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness, clearance_screw_hole);
-//    }
-//}
 
 module housing_external_blades(
     blade_count,
