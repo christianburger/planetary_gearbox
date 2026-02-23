@@ -428,72 +428,76 @@ module carrier_bottom(
     }
 }
 
+m3_nut_cr        = (5.5 / 2) / cos(30);
+m3_nut_thickness = 2.4;
 
 module carrier_top(
     plate_diam, plate_thickness, spacing, total_height,
     radius_to_pockets,
     planet_angles, bearing_id, sun_clearance_hole,
     shaft_diam, tolerance_bore, hub_diam, hub_height, setscrew_diam,
-    planet_outer_diam, planet_clearance
+    planet_outer_diam, planet_clearance,
+    nut_insertion_clearance = 6
 ) {
+    nut_pocket_depth = m3_nut_thickness + tolerance_bore;
+
     difference() {
 
-        // POSITIVE
+        // ── POSITIVE BODIES ─────────────────────────────────────────────────
         union() {
-            // Top plate
             cylinder(d = plate_diam, h = plate_thickness);
-
-            // Hub
             translate([0, 0, plate_thickness])
                 cylinder(d = hub_diam, h = hub_height);
         }
 
-        // Shaft hole
+        // ── SUBTRACTIONS ────────────────────────────────────────────────────
+
+        // 1. Central shaft bore
         translate([0, 0, -0.1])
             cylinder(
                 d = shaft_diam + tolerance_bore,
                 h = plate_thickness + hub_height + 0.2
             );
 
-        // Planet bearing shafts (top plate only)
+        // 2. Planet-bearing shaft holes
         for (a = planet_angles) {
-            translate(
-                concat(
-                    polar_xy(radius_to_pockets, a),
-                    [-0.1]
-                )
-            )
-                cylinder(
-                    d = bearing_id + 0.3,
-                    h = plate_thickness + 0.2
-                );
+            translate(concat(polar_xy(radius_to_pockets, a), [-0.1]))
+                cylinder(d = bearing_id + 0.3, h = plate_thickness + 0.2);
         }
 
-        // SAME M3 holes — SAME math — SAME radius — SAME phase
-        for (a = planet_angles) {
-            translate(
-                concat(
-                    polar_xy(radius_to_pockets, a + 60),
-                    [-0.1]
-                )
-            )
-                cylinder(
-                    d = 3.2,
-                    h = plate_thickness + 0.2
-                );
+        // 3. M3 screw holes + alternating nut pockets.
+        //    Uses let() to correctly bind 'a' per iteration in OpenSCAD.
+        //    Even indices (i = 0, 2, 4) → through-hole + nut pocket.
+        //    Odd  indices (i = 1, 3, 5) → plain through-hole only.
+        for (i = [0 : len(planet_angles) - 1]) {
+            let(a = planet_angles[i]) {
+
+                translate(concat(polar_xy(radius_to_pockets, a + 60), [0])) {
+
+                    // M3 clearance hole — always present
+                    translate([0, 0, -0.1])
+                        cylinder(d = 3.2, h = plate_thickness + 0.2);
+
+                    // Hex-nut pocket — even indices only
+                    if (i % 2 == 0 || i > 0) {
+                        translate([0, 0, plate_thickness - nut_pocket_depth])
+                            rotate([0, 0, a + 30])
+                                cylinder(
+                                    d   = m3_nut_cr * 2,
+                                    h   = nut_pocket_depth + nut_insertion_clearance + 0.1,
+                                    $fn = 6
+                                );
+                    }
+                }
+            }
         }
 
-        // Setscrew
+        // 4. Set-screw through hub side wall
         translate([0, 0, plate_thickness + hub_height - 3])
             rotate([90, 0, 0])
-                cylinder(
-                    d = setscrew_diam,
-                    h = hub_diam * 2,
-                    center = true
-                );
+                cylinder(d = setscrew_diam, h = hub_diam * 2, center = true);
     }
 }
-
 
 module planet_gear(
     teeth, mod, thickness, pressure_angle, shaft_diam, 
