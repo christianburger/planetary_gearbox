@@ -108,13 +108,13 @@ setscrew_output_height = hub_height_output - 3;
 // HOUSING & SCREW CONFIGURATION
 // ============================================================================
 wall_thickness = 4;
-housing_wall_height_clearance = 4; 
+housing_wall_height_clearance = 0; 
 blade_thickness = 0;
 blade_length = 15;
 blade_to_screw_clearance = 5;
 
 // Ring Gear / Body Dimensions
-ring_gear_thickness = carrier_total_height + 1.0; 
+ring_gear_thickness = carrier_total_height; 
 //ring_gear_outer_diameter = pitch_radius_ring * 2 + 8;
 ring_gear_outer_diameter = 50 - wall_thickness;
 
@@ -520,36 +520,6 @@ module planet_gear(
     }
 }
 
-module ring_gear_box_body(teeth, mod, thickness, pressure_angle, housing_size, chamfer_size, ring_rotation, mesh_clearance) {
-
-    inner_clearance_radius = outer_radius_sun +  2 * sin(120) * outer_radius_planet + 4 * mesh_clearance;
-    
-    difference() {
-        union() {
-            // External Housing Shape
-            difference() {
-              housing_body_profile(housing_size, thickness, chamfer_size);
-              cylinder(r = inner_clearance_radius, h = thickness + 0.2);
-            }
-            // ADD the physical ring gear as a positive feature
-            translate([0, 0, thickness / 2]) {
-                rotate([0, 0, ring_rotation]) {
-                    ring_gear(
-                        mod = mod,
-                        teeth = teeth,
-                        thickness = thickness,
-                        pressure_angle = pressure_angle,
-                        backing = wall_thickness  // Ring wall thickness
-                    );
-
-                }
-            }
-        }
-        
-        // M4 Assembly Holes
-        assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness, clearance_screw_hole);
-    }
-}
 
 module ring_gear_box_body(
     teeth,
@@ -631,7 +601,7 @@ module ring_gear_box_body(
         }
        
         // =============================================================
-        // M4 assembly holes (unchanged)
+        // M4 assembly screw holes — at corners, full depth
         // =============================================================
         assembly_screw_holes(
             assembly_hole_radius,
@@ -639,6 +609,24 @@ module ring_gear_box_body(
             thickness,
             clearance_screw_hole
         );
+
+        // =============================================================
+        // M4 hex nut pockets — same XY as screw holes, mid-height,
+        // sized for M4 nut (7.66 mm a/f → 8.2 with clearance).
+        // Pocket is taller than the nut (12 mm vs 3.2 mm) so the nut
+        // can be slid in horizontally before the housing is closed.
+        // $fn=6 is set here, not inside assembly_screw_holes, so only
+        // the nut cylinders are hexagonal.
+        // =============================================================
+        nut_af       = 8.2;                        // M4 across flats + clearance
+        nut_cr       = (nut_af / 2) / cos(30);     // circumscribed radius for $fn=6
+        nut_pocket_h = 12;                          // insertion clearance height
+
+        for (angle = [45, 135, 225, 315]) {
+            translate(concat(polar_xy(assembly_hole_radius, angle),
+                             [thickness / 2 - nut_pocket_h / 2]))
+                cylinder(r = nut_cr, h = nut_pocket_h, $fn = 6);
+        }
         
         // =============================================================
         // Mid-height M4 hex nut traps
@@ -799,6 +787,17 @@ render_housing_bottom= false;
 render_housing_top = true;
 render_housing_wall  = false;
 
+/*
+render_sun_gear      = true;
+render_planet_gear   = true;
+render_carrier_top   = true;
+render_carrier_bottom= true;
+render_ring_gear     = true;
+render_housing_bottom= true;
+render_housing_top   = true;
+render_housing_wall  = true;
+*/
+
 // ============================================================================
 // PART INSTANTIATION
 // ============================================================================
@@ -895,11 +894,11 @@ translate([0, 0, z_offset_housing_bottom]) {
 if (render_housing_top)
 color("gray", 0.5)
 translate([0, 0, z_offset_housing_top]) {
-    rotate([0, 180, 0])
+    rotate([0, 0, 0])
         top_housing_plate(housing_size, wall_thickness, box_chamfer_size);
 }
 
 if (render_housing_wall)
 translate([0, 0, z_offset_housing_wall]) {
-    housing_wall(housing_size, carrier_total_height + housing_wall_height_clearance, box_chamfer_size);
+    housing_wall(housing_size, carrier_total_height - wall_thickness + housing_wall_height_clearance, box_chamfer_size);
 }
