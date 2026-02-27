@@ -92,7 +92,7 @@ planet_angle_3 = 240;
 carrier_plate_thickness = 6;
 carrier_plate_diameter = pitch_radius_ring * 2 - 4;
 clearance_gear_to_plate = 1.5;
-carrier_to_planets_clearance = 3;   
+carrier_to_planets_clearance = 2;   
 carrier_spacing = gear_thickness + clearance_gear_to_plate * 2;
 carrier_total_height = carrier_plate_thickness * 2 + carrier_spacing;
 
@@ -778,13 +778,14 @@ module housing_wall(size, thickness, chamfer_size) {
 // ============================================================================
 // PART RENDER SWITCHES — set only one to true per file
 // ============================================================================
+
 render_sun_gear      = false;
 render_planet_gear   = false;
 render_carrier_top   = false;
 render_carrier_bottom= false;
 render_ring_gear     = false;
 render_housing_bottom= false;
-render_housing_top   = false;
+render_housing_top   = true;
 render_housing_wall = true;
 
 /*
