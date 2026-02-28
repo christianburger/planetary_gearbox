@@ -174,14 +174,14 @@ ref_ring_angle = 8;  // Adjust to rotate ring gear teeth for alignment
 // ============================================================================
 // VISUALIZATION OFFSETS
 // ============================================================================
-z_offset_sun = 34;
-z_offset_planets = 34;
-z_offset_carrier_top = 80;
-z_offset_carrier_bottom = 65;
-z_offset_ring = 20;           
+z_offset_sun = 0;
+z_offset_planets = 0;
+z_offset_carrier_top = 0;
+z_offset_carrier_bottom = 0;
+z_offset_ring = 0;           
 z_offset_housing_bottom = 0;   
 z_offset_housing_top = 0;    
-z_offset_housing_wall = 4;
+z_offset_housing_wall = 0;
 
 // ============================================================================
 // HELPER MODULES
@@ -787,7 +787,7 @@ render_carrier_bottom       = false;
 render_ring_gear            = false;
 render_housing_bottom       = false;
 render_housing_top          = false;
-render_housing_top_wall     = false;
+render_housing_top_wall = true;
 render_housing_wall         = false;
 
 /*

@@ -92,7 +92,7 @@ planet_angle_3 = 240;
 carrier_plate_thickness = 6;
 carrier_plate_diameter = pitch_radius_ring * 2 - 4;
 clearance_gear_to_plate = 1.5;
-carrier_to_planets_clearance = 2;   
+carrier_to_planets_clearance = 1.2;   
 carrier_spacing = gear_thickness + clearance_gear_to_plate * 2;
 carrier_total_height = carrier_plate_thickness * 2 + carrier_spacing;
 
@@ -176,7 +176,8 @@ ref_ring_angle = 8;  // Adjust to rotate ring gear teeth for alignment
 // ============================================================================
 z_offset_sun = 0;
 z_offset_planets = 0;
-z_offset_carrier = 0;
+z_offset_carrier_top = 0;
+z_offset_carrier_bottom = 0;
 z_offset_ring = 0;           
 z_offset_housing_bottom = 0;   
 z_offset_housing_top = 0;    
@@ -779,14 +780,15 @@ module housing_wall(size, thickness, chamfer_size) {
 // PART RENDER SWITCHES — set only one to true per file
 // ============================================================================
 
-render_sun_gear      = false;
-render_planet_gear   = false;
-render_carrier_top   = false;
-render_carrier_bottom= false;
+render_sun_gear             = false;
+render_planet_gear          = false;
+render_carrier_top          = false;
+render_carrier_bottom       = false;
 render_ring_gear = true;
-render_housing_bottom= false;
-render_housing_top   = false;
-render_housing_wall  = false;
+render_housing_bottom       = false;
+render_housing_top          = false;
+render_housing_top_wall     = false;
+render_housing_wall         = false;
 
 /*
 render_sun_gear      = true;
@@ -796,6 +798,7 @@ render_carrier_bottom= true;
 render_ring_gear     = true;
 render_housing_bottom= true;
 render_housing_top   = true;
+render_housing_top_wall   = true;
 render_housing_wall  = true;
 */
 
@@ -835,7 +838,7 @@ translate([0, 0, z_offset_planets]) {
 
 if (render_carrier_top)
 color("lightgreen")
-translate([0, 0, z_offset_carrier]) {
+translate([0, 0, z_offset_carrier_top]) {
     carrier_top(
         plate_diam              = carrier_plate_diameter,
         plate_thickness         = carrier_plate_thickness,
@@ -857,7 +860,7 @@ translate([0, 0, z_offset_carrier]) {
 
 if (render_carrier_bottom)
 color("lightgreen")
-translate([0, 0, z_offset_carrier]) {
+translate([0, 0, z_offset_carrier_bottom]) {
     carrier_bottom(
         plate_diam              = carrier_plate_diameter,
         plate_thickness         = carrier_plate_thickness,
@@ -892,14 +895,14 @@ translate([0, 0, z_offset_housing_bottom]) {
     bottom_housing_plate(housing_size, wall_thickness, box_chamfer_size);
 }
 
-if (render_housing_top)
+if (render_housing_top || render_housing_top_wall)
 color("gray", 0.5)
 translate([0, 0, z_offset_housing_top]) {
     rotate([0, 0, 0])
         top_housing_plate(housing_size, wall_thickness, box_chamfer_size);
 }
 
-if (render_housing_wall)
+if (render_housing_wall || render_housing_top_wall)
 translate([0, 0, z_offset_housing_wall]) {
     housing_wall(housing_size, carrier_total_height - wall_thickness + housing_wall_height_clearance, box_chamfer_size);
 }
