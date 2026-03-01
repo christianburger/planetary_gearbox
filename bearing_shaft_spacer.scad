@@ -19,7 +19,7 @@ $fn = 100;
 clearance_bearing_pocket = 0.1;
 clearance_screw_hole = 0.2; // Generic clearance
 clearance_boss_center = 0.3;
-tolerance_shaft = 0.4;
+tolerance_shaft = 0.2;
 tolerance_output_bore = 0.4;
 
 // ============================================================================
@@ -77,7 +77,7 @@ shaft_flat_height = 4.0;
 hub_diameter_sun = 12;
 hub_height_sun = 10;
 setscrew_sun_diameter = 5.0;
-setscrew_sun_clearance = 0.6;
+setscrew_sun_clearance = 0.4;
 clearance_sun_insertion = 3.0;
 sun_insertion_bore_diameter = outer_radius_sun * 2 + clearance_sun_insertion;
 
@@ -267,9 +267,9 @@ module sun_gear(teeth, mod, thickness, pressure_angle, shaft_diam, shaft_flat_he
                                 square([shaft_diam + tolerance_shaft, (shaft_diam + tolerance_shaft)/2 - shaft_flat_height/2]);
                         }
                     }
-                translate([0, -hub_diam, thickness/2 + hub_height/2])
-                    rotate([90, 0, 0])
-                        cylinder(d = setscrew_diam - setscrew_clearance, h = hub_diam * 2, center = true);
+                //translate([0, -hub_diam, thickness/2 + hub_height/2])
+                    //rotate([90, 0, 0])
+                        //cylinder(d = setscrew_diam - setscrew_clearance, h = hub_diam * 2, center = true);
             }
     translate([0, 0, thickness/2 + hub_height])
         difference() {
