@@ -99,7 +99,7 @@ carrier_total_height = carrier_plate_thickness * 2 + carrier_spacing;
 // OUTPUT SHAFT
 shaft_diameter_output = 9.0;
 hub_diameter_output = 18;
-hub_height_output = 22 - carrier_plate_thickness;
+hub_height_output = 18 - carrier_plate_thickness;
 setscrew_output_diameter = 3.0;
 setscrew_output_clearance = 0.6;
 setscrew_output_height = hub_height_output - 3;
@@ -278,16 +278,127 @@ module sun_gear(teeth, mod, thickness, pressure_angle, shaft_diam, shaft_flat_he
         }
 }
 
+//module carrier(
+//    plate_diam, plate_thickness, spacing, total_height, 
+//    radius_to_pockets,      // <--- Critical: Received from calculated variable
+//    planet_angles, bearing_id, sun_clearance_hole, 
+//    shaft_diam, tolerance_bore, hub_diam, hub_height, setscrew_diam,
+//    planet_outer_diam, planet_clearance  // <--- ADD THESE PARAMETERS
+//) {
+//    difference() {
+//        // POSITIVE SHAPE
+//        union() {
+//            cylinder(d = plate_diam, h = plate_thickness);
+//            translate([0, 0, plate_thickness]) cylinder(d = plate_diam, h = spacing);
+//            translate([0, 0, spacing + plate_thickness]) cylinder(d = plate_diam, h = plate_thickness);
+//            translate([0, 0, total_height]) cylinder(d = hub_diam, h = hub_height);
+//        }
+//
+//        // NEGATIVE SHAPES
+//        // Output shaft hole (through entire assembly including hub)
+//        translate([0, 0, -0.1]) cylinder(d = shaft_diam + tolerance_bore, h = total_height + hub_height + 0.2);
+//        
+//        // Sun Gear Clearance (through bottom plate AND middle spacing section)
+//        translate([0, 0, -0.1]) cylinder(d = sun_clearance_hole, h = plate_thickness + spacing + 0.2);
+//
+//        // Planet Gear Body Clearance Holes (in middle spacing section)
+//        for (angle = planet_angles) {
+//            translate(concat(polar_xy(radius_to_pockets, angle), [plate_thickness - 0.1]))
+//                cylinder(d = planet_outer_diam + planet_clearance, h = spacing + 0.2);
+//        }
+//
+//        // Planet Bearing Shaft Holes (through entire height)
+//        for (angle = planet_angles) {
+//            translate(concat(polar_xy(radius_to_pockets, angle), [-0.1]))
+//                cylinder(d = bearing_id + 0.3, h = total_height + 0.2);
+//        }
+//
+//        // Setscrew (3mm below top of hub)
+//        translate([0, 0, total_height + hub_height - 3]) 
+//            rotate([90, 0, 0]) 
+//            cylinder(d = setscrew_diam, h = hub_diam * 2, center = true);
+//            
+//            
+//          // =============================================================
+//        // NEW: Column M3 through-holes (solid sections only)
+//        // Same radius, phased 60° from planet axes
+//        // =============================================================
+//        for (angle = planet_angles) {
+//            translate(
+//                concat(
+//                    polar_xy(radius_to_pockets, angle + 60),
+//                    [-0.1]
+//                )
+//            )
+//                cylinder(
+//                    d = 3.2,   // M3 clearance
+//                    h = plate_thickness * 2 + spacing + 0.2
+//                );
+//        }
+//
+//        // Setscrew (3mm below top of hub)
+//        translate([0, 0, total_height + hub_height - 3])
+//            rotate([90, 0, 0])
+//                cylinder(
+//                    d = setscrew_diam,
+//                    h = hub_diam * 2,
+//                    center = true
+//                );
+//           
+//    
+//    }
+//}
+//module carrier(
+//    plate_diam, plate_thickness, spacing, total_height, 
+//    radius_to_pockets, planet_angles, bearing_id, sun_clearance_hole, 
+//    shaft_diam, tolerance_bore, hub_diam, hub_height, setscrew_diam,
+//    planet_outer_diam, planet_clearance
+//) {
+//    difference() {
+//        union() {
+//            cylinder(d = plate_diam, h = plate_thickness);
+//            translate([0, 0, plate_thickness]) cylinder(d = plate_diam, h = spacing);
+//            translate([0, 0, spacing + plate_thickness]) cylinder(d = plate_diam, h = plate_thickness);
+//            translate([0, 0, total_height]) cylinder(d = hub_diam, h = hub_height);
+//        }
+//
+//        // shaft bore
+//        translate([0, 0, -0.1]) cylinder(d = shaft_diam + tolerance_bore, h = total_height + hub_height + 0.3);
+//        
+//        // sun clearance
+//        translate([0, 0, -0.1]) cylinder(d = sun_clearance_hole, h = total_height + 0.3);
+//
+//        // planet body clearance (spacer only)
+//        for (angle = planet_angles) {
+//            translate(concat(polar_xy(radius_to_pockets, angle), [plate_thickness - 0.1]))
+//                cylinder(d = planet_outer_diam + planet_clearance, h = spacing + 0.2);
+//        }
+//
+//        // 3× bearing shafts full through
+//        for (angle = planet_angles) {
+//            translate(concat(polar_xy(radius_to_pockets, angle), [-0.1]))
+//                cylinder(d = bearing_id + 0.3, h = total_height + hub_height + 0.3);
+//        }
+//
+//        // setscrew in hub (removed duplicate)
+//        translate([0, 0, total_height + hub_height - 3])
+//            rotate([90, 0, 0])
+//                cylinder(d = setscrew_diam, h = hub_diam * 2 + 1, center = true);
+//    }
+//}
 
 module carrier(
     plate_diam, plate_thickness, spacing, total_height, 
-    radius_to_pockets,      // <--- Critical: Received from calculated variable
-    planet_angles, bearing_id, sun_clearance_hole, 
+    radius_to_pockets, planet_angles, bearing_id, sun_clearance_hole, 
     shaft_diam, tolerance_bore, hub_diam, hub_height, setscrew_diam,
-    planet_outer_diam, planet_clearance  // <--- ADD THESE PARAMETERS
+    planet_outer_diam, planet_clearance,
+    nut_insertion_clearance = 6
 ) {
+    m3_nut_cr = (5.5 / 2) / cos(30);
+    m3_nut_thickness = 2.4;
+    nut_pocket_depth = m3_nut_thickness + tolerance_bore;
+
     difference() {
-        // POSITIVE SHAPE
         union() {
             cylinder(d = plate_diam, h = plate_thickness);
             translate([0, 0, plate_thickness]) cylinder(d = plate_diam, h = spacing);
@@ -295,62 +406,42 @@ module carrier(
             translate([0, 0, total_height]) cylinder(d = hub_diam, h = hub_height);
         }
 
-        // NEGATIVE SHAPES
-        // Output shaft hole (through entire assembly including hub)
-        translate([0, 0, -0.1]) cylinder(d = shaft_diam + tolerance_bore, h = total_height + hub_height + 0.2);
+        // shaft bore
+        translate([0, 0, -0.1]) cylinder(d = shaft_diam + tolerance_bore, h = total_height + hub_height + 0.3);
         
-        // Sun Gear Clearance (through bottom plate AND middle spacing section)
-        translate([0, 0, -0.1]) cylinder(d = sun_clearance_hole, h = plate_thickness + spacing + 0.2);
+        // sun clearance
+        translate([0, 0, -0.1]) cylinder(d = sun_clearance_hole, h = total_height + 0.3);
 
-        // Planet Gear Body Clearance Holes (in middle spacing section)
+        // planet body clearance (spacer only)
         for (angle = planet_angles) {
             translate(concat(polar_xy(radius_to_pockets, angle), [plate_thickness - 0.1]))
                 cylinder(d = planet_outer_diam + planet_clearance, h = spacing + 0.2);
         }
 
-        // Planet Bearing Shaft Holes (through entire height)
+        // 3× bearing shafts full through (limited to total_height)
         for (angle = planet_angles) {
             translate(concat(polar_xy(radius_to_pockets, angle), [-0.1]))
-                cylinder(d = bearing_id + 0.3, h = total_height + 0.2);
+                cylinder(d = bearing_id + 0.3, h = total_height + 0.3);
         }
 
-        // Setscrew (3mm below top of hub)
-        translate([0, 0, total_height + hub_height - 3]) 
-            rotate([90, 0, 0]) 
-            cylinder(d = setscrew_diam, h = hub_diam * 2, center = true);
-            
-            
-          // =============================================================
-        // NEW: Column M3 through-holes (solid sections only)
-        // Same radius, phased 60° from planet axes
-        // =============================================================
+        // 3× hex nut pockets on top plate
         for (angle = planet_angles) {
-            translate(
-                concat(
-                    polar_xy(radius_to_pockets, angle + 60),
-                    [-0.1]
-                )
-            )
-                cylinder(
-                    d = 3.2,   // M3 clearance
-                    h = plate_thickness * 2 + spacing + 0.2
-                );
+            translate(concat(polar_xy(radius_to_pockets, angle), [0]))
+                translate([0, 0, total_height - nut_pocket_depth])
+                    rotate([0, 0, angle + 30])
+                        cylinder(
+                            d = m3_nut_cr * 2,
+                            h = nut_pocket_depth + nut_insertion_clearance + 0.1,
+                            $fn = 6
+                        );
         }
 
-        // Setscrew (3mm below top of hub)
+        // setscrew in hub
         translate([0, 0, total_height + hub_height - 3])
-            rotate([90, 0, 0])
-                cylinder(
-                    d = setscrew_diam,
-                    h = hub_diam * 2,
-                    center = true
-                );
-           
-    
+            rotate([90, 0, 90])
+                cylinder(d = setscrew_diam, h = hub_diam * 2 + 1, center = true);
     }
 }
-
-
 
 module carrier_bottom(
     plate_diam, plate_thickness, spacing, total_height,
@@ -782,6 +873,7 @@ module housing_wall(size, thickness, chamfer_size) {
 
 render_sun_gear             = false;
 render_planet_gear = true;
+render_carrier_full         = false;
 render_carrier_top          = false;
 render_carrier_bottom       = false;
 render_ring_gear            = false;
@@ -791,15 +883,16 @@ render_housing_top_wall     = false;
 render_housing_wall         = false;
 
 /*
-render_sun_gear      = true;
-render_planet_gear   = true;
-render_carrier_top   = true;
-render_carrier_bottom= true;
-render_ring_gear     = true;
-render_housing_bottom= true;
-render_housing_top   = true;
-render_housing_top_wall   = true;
-render_housing_wall  = true;
+render_sun_gear             = true;
+render_planet_gear          = true;
+render_carrier_full         = true;
+render_carrier_top          = true;
+render_carrier_bottom       = true;
+render_ring_gear            = true;
+render_housing_bottom       = true;
+render_housing_top          = true;
+render_housing_top_wall     = true;
+render_housing_wall         = true;
 */
 
 // ============================================================================
@@ -835,6 +928,30 @@ translate([0, 0, z_offset_planets]) {
         }
     }
 }
+
+
+if (render_carrier_full)
+color("lightgreen")
+translate([0, 0, z_offset_carrier_bottom]) {
+    carrier(
+        plate_diam              = carrier_plate_diameter,
+        plate_thickness         = carrier_plate_thickness,
+        spacing                 = carrier_spacing,
+        total_height            = carrier_total_height,
+        radius_to_pockets       = calculated_carrier_radius,
+        planet_angles           = planet_angles_list,
+        bearing_id              = bearing_683_id,
+        sun_clearance_hole      = sun_clearance_hole_diam,
+        shaft_diam              = shaft_diameter_output,
+        tolerance_bore          = tolerance_output_bore,
+        hub_diam                = hub_diameter_output,
+        hub_height              = hub_height_output,
+        setscrew_diam           = setscrew_output_diameter,
+        planet_outer_diam       = outer_radius_planet * 2,
+        planet_clearance        = carrier_to_planets_clearance
+    );
+}
+
 
 if (render_carrier_top)
 color("lightgreen")
@@ -879,6 +996,7 @@ translate([0, 0, z_offset_carrier_bottom]) {
         planet_clearance        = carrier_to_planets_clearance
     );
 }
+
 
 if (render_ring_gear)
 color("red", 0.7)

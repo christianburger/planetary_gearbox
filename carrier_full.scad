@@ -873,10 +873,10 @@ module housing_wall(size, thickness, chamfer_size) {
 
 render_sun_gear             = false;
 render_planet_gear          = false;
-render_carrier_full         = false;
+render_carrier_full = true;
 render_carrier_top          = false;
 render_carrier_bottom       = false;
-render_ring_gear = true;
+render_ring_gear            = false;
 render_housing_bottom       = false;
 render_housing_top          = false;
 render_housing_top_wall     = false;
