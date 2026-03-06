@@ -99,7 +99,7 @@ carrier_total_height = carrier_plate_thickness * 2 + carrier_spacing;
 // OUTPUT SHAFT
 shaft_diameter_output = 9.0;
 hub_diameter_output = 18;
-hub_height_output = 18 - carrier_plate_thickness;
+hub_height_output = 16;
 setscrew_output_diameter = 3.0;
 setscrew_output_clearance = 0.6;
 setscrew_output_height = hub_height_output - 3;
@@ -107,8 +107,8 @@ setscrew_output_height = hub_height_output - 3;
 // ============================================================================
 // HOUSING & SCREW CONFIGURATION
 // ============================================================================
-wall_thickness = 4;
-housing_wall_height_clearance = 0; 
+wall_thickness = 5;
+housing_wall_height_clearance = 4; 
 blade_thickness = 0;
 blade_length = 15;
 blade_to_screw_clearance = 5;
@@ -176,6 +176,7 @@ ref_ring_angle = 8;  // Adjust to rotate ring gear teeth for alignment
 // ============================================================================
 z_offset_sun = 34;
 z_offset_planets = 34;
+z_offset_carrier_all = 0;
 z_offset_carrier_top = 80;
 z_offset_carrier_bottom = 65;
 z_offset_ring = 20;           
@@ -407,10 +408,10 @@ module carrier(
         }
 
         // shaft bore
-        translate([0, 0, -0.1]) cylinder(d = shaft_diam + tolerance_bore, h = total_height + hub_height + 0.3);
+        translate([0, 0, -0.1]) cylinder(d = shaft_diam + tolerance_bore, h = total_height + hub_height + 9);
         
         // sun clearance
-        translate([0, 0, -0.1]) cylinder(d = sun_clearance_hole, h = total_height + 0.3);
+        translate([0, 0, -0.1]) cylinder(d = sun_clearance_hole, h = total_height - plate_thickness + 0.2);
 
         // planet body clearance (spacer only)
         for (angle = planet_angles) {
@@ -847,20 +848,39 @@ module cross_removal_pattern(size, arm_width, height) {
     translate([-size/2 - 0.1, -arm_width/2, 0])
         cube([size + 0.2, arm_width, height + 0.1]);
 }
+//
+//module housing_wall(size, thickness, chamfer_size) {
+//  internal_removal_profile_size = size - m4_screw_diameter * 4;
+//  difference() {
+//      housing_body_profile(size, thickness, chamfer_size);
+//      housing_body_profile(internal_removal_profile_size, thickness, chamfer_size);
+//      assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness +   bearing_695_thickness, clearance_screw_hole);
+//      // Cross pattern removal (leaves 4 corner legs)
+//      cross_arm_width = housing_size - m4_screw_diameter * 4 - wall_thickness * 2 + 0.4;
+//      cross_arm_height = thickness;
+//      translate([0, 0, 0]) {
+//        cross_removal_pattern(size - wall_thickness, cross_arm_width, cross_arm_height);
+//      }
+//  }
+//}
+
 
 module housing_wall(size, thickness, chamfer_size) {
-  internal_removal_profile_size = size - m4_screw_diameter * 4;
-  difference() {
-      housing_body_profile(size, thickness, chamfer_size);
-      housing_body_profile(internal_removal_profile_size, thickness, chamfer_size);
-      assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness +   bearing_695_thickness, clearance_screw_hole);
-      // Cross pattern removal (leaves 4 corner legs)
-      cross_arm_width = housing_size - m4_screw_diameter * 4 - wall_thickness * 2 + 0.4;
-      cross_arm_height = thickness;
-      translate([0, 0, 0]) {
-        cross_removal_pattern(size - wall_thickness, cross_arm_width, cross_arm_height);
-      }
-  }
+    internal_removal_profile_size = size - m4_screw_diameter * 4;
+
+    // inner chamfer: mirror the outer chamfer face through the M4 center
+    // so both faces are equidistant from the M4 hole
+    inner_chamfer = sqrt(2) * (internal_removal_profile_size + size)
+                    - chamfer_size
+                    - 4 * assembly_hole_radius;
+
+    difference() {
+        housing_body_profile(size, thickness, chamfer_size);
+        housing_body_profile(internal_removal_profile_size, thickness, inner_chamfer);
+        assembly_screw_holes(assembly_hole_radius, m4_screw_diameter, thickness + bearing_695_thickness, clearance_screw_hole);
+        cross_arm_width = housing_size - m4_screw_diameter * 4 - wall_thickness * 2 + 0.4;
+        cross_removal_pattern(size - wall_thickness, cross_arm_width, thickness);
+    }
 }
  
 // ============================================================================
@@ -932,7 +952,7 @@ translate([0, 0, z_offset_planets]) {
 
 if (render_carrier_full)
 color("lightgreen")
-translate([0, 0, z_offset_carrier_bottom]) {
+translate([0, 0, z_offset_carrier_all]) {
     carrier(
         plate_diam              = carrier_plate_diameter,
         plate_thickness         = carrier_plate_thickness,
